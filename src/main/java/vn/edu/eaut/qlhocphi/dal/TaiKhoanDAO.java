@@ -106,6 +106,25 @@ public class TaiKhoanDAO {
         return null;
     }
 
+    /**
+     * Lay TOAN BO tai khoan dang gan chung 1 Gmail (Gmail khong con la UNIQUE - 1
+     * Gmail co the dung chung cho nhieu tai khoan, vi du 1 tai khoan Sinh vien va 1
+     * tai khoan Ke toan cung Gmail cua 1 nguoi). Dung cho man hinh "chon tai khoan"
+     * khi dang nhap/khoi phuc mat khau bang Google ma Gmail do khop nhieu tai khoan.
+     */
+    public List<TaiKhoan> layDanhSachTheoGoogleEmail(String googleEmail) throws SQLException {
+        String sql = "SELECT * FROM TaiKhoan WHERE GoogleEmail = ? ORDER BY VaiTro, HoTen";
+        List<TaiKhoan> list = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, googleEmail);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(map(rs));
+            }
+        }
+        return list;
+    }
+
     public boolean xoa(int maTK) throws SQLException {
         String sql = "DELETE FROM TaiKhoan WHERE MaTK = ?";
         try (Connection conn = DBConnection.getConnection();

@@ -5,6 +5,7 @@ import vn.edu.eaut.qlhocphi.config.DBConnection;
 import vn.edu.eaut.qlhocphi.config.UITheme;
 import vn.edu.eaut.qlhocphi.gui.LoginFrame;
 
+
 import javax.swing.*;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -21,6 +22,8 @@ import java.sql.SQLException;
 public class App {
 
     public static void main(String[] args) {
+        vn.edu.eaut.qlhocphi.util.GlobalExceptionHandler.cauHinh();
+
         // UI phai duoc ap dung tren Event Dispatch Thread truoc khi tao bat ky JFrame nao
         SwingUtilities.invokeLater(() -> {
             UITheme.apply();
@@ -28,6 +31,9 @@ public class App {
             if (!kiemTraKetNoiCSDL()) {
                 return; // da bao loi cho nguoi dung, khong mo tiep giao dien
             }
+
+            vn.edu.eaut.qlhocphi.bus.TuDongThuHocPhiScheduler.getInstance().start();
+            vn.edu.eaut.qlhocphi.bus.NhacNoTuDongScheduler.getInstance().start();
 
             LoginFrame loginFrame = new LoginFrame();
             loginFrame.setLocationRelativeTo(null);

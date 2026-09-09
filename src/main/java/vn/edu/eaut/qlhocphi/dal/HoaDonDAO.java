@@ -5,12 +5,13 @@ import vn.edu.eaut.qlhocphi.model.HoaDonHocPhi;
 
 import java.math.BigDecimal;
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class HoaDonDAO {
 
-    /** Lay danh sach hoa don, kem ten SV, ten hoc ky va tong da nop (join + subquery). */
     private static final String SELECT_JOIN =
             "SELECT hd.*, sv.HoTen AS TenSV, hk.TenHocKy AS TenHocKy, " +
                     "COALESCE((SELECT SUM(pt.SoTienNop) FROM PhieuThu pt WHERE pt.MaHoaDon = hd.MaHoaDon), 0) AS DaNop " +
@@ -71,7 +72,51 @@ public class HoaDonDAO {
         return -1;
     }
 
-    /** Xoa 1 hoa don theo ma. Cac phieu thu lien quan se tu dong bi xoa (ON DELETE CASCADE). */
+    /** MOI: cap nhat % mien giam + ly do cho 1 hoa don da co san. */
+    public void capNhatMienGiam(int maHoaDon, BigDecimal tyLeMienGiam, String lyDo) throws SQLException {
+        String sql = "UPDATE HoaDonHocPhi SET TyLeMienGiam = ?, LyDoMienGiam = ? WHERE MaHoaDon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setBigDecimal(1, tyLeMienGiam);
+            ps.setString(2, lyDo);
+            ps.setInt(3, maHoaDon);
+            ps.executeUpdate();
+        }
+    }
+
+    /** MOI: cap nhat ngay gan nhat da gui nhac no (dung cho tinh nang tu dong nhac no qua email/SMS). */
+    public void capNhatNgayNhacNo(int maHoaDon, LocalDate ngayNhacNo) throws SQLException {
+        String sql = "UPDATE HoaDonHocPhi SET NgayNhacNoGanNhat = ? WHERE MaHoaDon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, ngayNhacNo != null ? Date.valueOf(ngayNhacNo) : null);
+            ps.setInt(2, maHoaDon);
+            ps.executeUpdate();
+        }
+    }
+
+    /** MOI: cap nhat thoi diem CHINH XAC (ca gio/phut) da gui email nhac no cho sinh vien. */
+    public void capNhatThoiDiemGuiEmail(int maHoaDon, LocalDateTime thoiDiem) throws SQLException {
+        String sql = "UPDATE HoaDonHocPhi SET ThoiDiemGuiEmailSV = ? WHERE MaHoaDon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(thoiDiem));
+            ps.setInt(2, maHoaDon);
+            ps.executeUpdate();
+        }
+    }
+
+    /** MOI: cap nhat thoi diem CHINH XAC (ca gio/phut) da gui SMS nhac no cho phu huynh. */
+    public void capNhatThoiDiemGuiSms(int maHoaDon, LocalDateTime thoiDiem) throws SQLException {
+        String sql = "UPDATE HoaDonHocPhi SET ThoiDiemGuiSmsPH = ? WHERE MaHoaDon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(thoiDiem));
+            ps.setInt(2, maHoaDon);
+            ps.executeUpdate();
+        }
+    }
+
     public void xoa(int maHoaDon) throws SQLException {
         String sql = "DELETE FROM HoaDonHocPhi WHERE MaHoaDon = ?";
         try (Connection conn = DBConnection.getConnection();
@@ -94,8 +139,16 @@ public class HoaDonDAO {
         hd.setDaNop(daNop != null ? daNop : BigDecimal.ZERO);
         Date han = rs.getDate("HanThanhToan");
         hd.setHanThanhToan(han != null ? han.toLocalDate() : null);
+        Date nhacNo = rs.getDate("NgayNhacNoGanNhat");
+        hd.setNgayNhacNoGanNhat(nhacNo != null ? nhacNo.toLocalDate() : null);
         Timestamp tao = rs.getTimestamp("NgayTao");
         hd.setNgayTao(tao != null ? tao.toLocalDateTime() : null);
+        hd.setTyLeMienGiam(rs.getBigDecimal("TyLeMienGiam"));
+        hd.setLyDoMienGiam(rs.getString("LyDoMienGiam"));
+        Timestamp tsEmail = rs.getTimestamp("ThoiDiemGuiEmailSV");
+        hd.setThoiDiemGuiEmailSV(tsEmail != null ? tsEmail.toLocalDateTime() : null);
+        Timestamp tsSms = rs.getTimestamp("ThoiDiemGuiSmsPH");
+        hd.setThoiDiemGuiSmsPH(tsSms != null ? tsSms.toLocalDateTime() : null);
         return hd;
     }
 }

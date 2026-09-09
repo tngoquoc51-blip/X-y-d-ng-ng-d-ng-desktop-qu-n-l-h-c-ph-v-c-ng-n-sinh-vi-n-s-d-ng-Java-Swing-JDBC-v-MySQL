@@ -2,6 +2,7 @@ package vn.edu.eaut.qlhocphi.gui.sinhvien;
 
 import vn.edu.eaut.qlhocphi.bus.CongNoService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
+import vn.edu.eaut.qlhocphi.gui.common.AutoRefreshTimer;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.gui.thanhtoan.PaymentMethodDialog;
 import vn.edu.eaut.qlhocphi.gui.thanhtoan.ChonSoTienThanhToanDialog;
@@ -80,6 +81,7 @@ public class HoaDonHocPhiSinhVienPanel extends JPanel {
         add(buildTableCard(), BorderLayout.CENTER);
 
         taiDuLieu();
+        AutoRefreshTimer.gan(this, 15, this::taiDuLieu);
     }
 
     // ================== BANNER TIEU DE ==================
@@ -511,7 +513,7 @@ public class HoaDonHocPhiSinhVienPanel extends JPanel {
     private void moThanhToan(HoaDonHocPhi hd) {
         Window chaMe = SwingUtilities.getWindowAncestor(this);
         new ChonSoTienThanhToanDialog(chaMe, hd.tinhConNo(), soTienDaChon ->
-                new PaymentMethodDialog(chaMe, hd.getMaHoaDon(), soTienDaChon, this::taiDuLieu).setVisible(true)
+                new PaymentMethodDialog(chaMe, maSV, hd.getMaHoaDon(), soTienDaChon, this::taiDuLieu).setVisible(true)
         ).setVisible(true);
     }
 

@@ -3,8 +3,10 @@ package vn.edu.eaut.qlhocphi.gui;
 import vn.edu.eaut.qlhocphi.bus.SinhVienService;
 import vn.edu.eaut.qlhocphi.bus.ThanhToanService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
+import vn.edu.eaut.qlhocphi.gui.common.QuetQRDialog;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.gui.thanhtoan.ThanhToanOnlineDialog;
+import vn.edu.eaut.qlhocphi.gui.thanhtoan.VietQRDialog;
 import vn.edu.eaut.qlhocphi.model.HoaDonHocPhi;
 import vn.edu.eaut.qlhocphi.model.SinhVien;
 import vn.edu.eaut.qlhocphi.dal.HoaDonDAO;
@@ -17,11 +19,6 @@ import java.awt.*;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Man hinh tra cuu cong khai (khong can dang nhap): sinh vien nhap Ma SV
- * de xem thong tin ca nhan va danh sach hoa don hoc phi, co the mo dialog
- * thanh toan online ngay tai day.
- */
 public class TraCuuFrame extends JFrame {
     private final SinhVienService sinhVienService = new SinhVienService();
     private final HoaDonDAO hoaDonDAO = new HoaDonDAO();
@@ -34,6 +31,7 @@ public class TraCuuFrame extends JFrame {
     private JTable table;
     private DefaultTableModel tableModel;
     private JButton btnThanhToan;
+    private JButton btnXemQR;
     private List<HoaDonHocPhi> danhSachHienTai;
 
     public TraCuuFrame(JFrame chaMe) {
@@ -103,11 +101,15 @@ public class TraCuuFrame extends JFrame {
         JLabel lbl = UIUtils.formLabel("Nhap Ma sinh vien:");
         txtMaSV = UIUtils.textField(18);
         btnTraCuu = UITheme.primaryButton("Tra cuu");
+        JButton btnQuetQR = UITheme.accentButton("Quet the SV (QR)");
+        btnQuetQR.setToolTipText("Dua the sinh vien co ma QR vao camera de tra cuu ngay, khong can go tay");
+        btnQuetQR.addActionListener(e -> quetQRTraCuu());
 
         JPanel trai = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         trai.setOpaque(false);
         trai.add(lbl);
         trai.add(txtMaSV);
+        trai.add(btnQuetQR);
 
         card.add(trai, BorderLayout.CENTER);
         card.add(btnTraCuu, BorderLayout.EAST);
@@ -168,10 +170,20 @@ public class TraCuuFrame extends JFrame {
         dongTieuDe.setOpaque(false);
         dongTieuDe.add(UITheme.sectionLabel("Danh sach hoa don hoc phi"), BorderLayout.WEST);
 
+        JPanel nhomNut = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        nhomNut.setOpaque(false);
+
+        btnXemQR = UITheme.secondaryButton("Ma QR chuyen khoan");
+        btnXemQR.setEnabled(false);
+        btnXemQR.addActionListener(e -> moQR());
+        nhomNut.add(btnXemQR);
+
         btnThanhToan = UITheme.primaryButton("Thanh toan online");
         btnThanhToan.setEnabled(false);
         btnThanhToan.addActionListener(e -> moThanhToan());
-        dongTieuDe.add(btnThanhToan, BorderLayout.EAST);
+        nhomNut.add(btnThanhToan);
+
+        dongTieuDe.add(nhomNut, BorderLayout.EAST);
         card.add(dongTieuDe, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(
@@ -183,7 +195,9 @@ public class TraCuuFrame extends JFrame {
         UIUtils.styleTable(table);
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                btnThanhToan.setEnabled(table.getSelectedRow() >= 0);
+                boolean coChon = table.getSelectedRow() >= 0;
+                btnThanhToan.setEnabled(coChon);
+                btnXemQR.setEnabled(coChon);
             }
         });
 
@@ -191,6 +205,17 @@ public class TraCuuFrame extends JFrame {
         scroll.setBorder(BorderFactory.createLineBorder(UITheme.BORDER, 1, true));
         card.add(scroll, BorderLayout.CENTER);
         return card;
+    }
+
+    /** MOI: mo camera quet ma QR tren the sinh vien, tu dong dien Ma SV va tra cuu ngay. */
+    private void quetQRTraCuu() {
+        QuetQRDialog dlg = new QuetQRDialog(this, "Quet the sinh vien de tra cuu");
+        dlg.setVisible(true);
+        String maSV = dlg.layKetQua();
+        if (maSV != null && !maSV.isBlank()) {
+            txtMaSV.setText(maSV.trim());
+            thucHienTraCuu();
+        }
     }
 
     private void thucHienTraCuu() {
@@ -256,6 +281,19 @@ public class TraCuuFrame extends JFrame {
             });
         }
         btnThanhToan.setEnabled(false);
+        btnXemQR.setEnabled(false);
+    }
+
+    private void moQR() {
+        int row = table.getSelectedRow();
+        if (row < 0 || danhSachHienTai == null || row >= danhSachHienTai.size()) return;
+        HoaDonHocPhi hd = danhSachHienTai.get(row);
+        BigDecimal conNo = hd.tinhConNo();
+        if (conNo.compareTo(BigDecimal.ZERO) <= 0) {
+            UIUtils.thongBao(this, "Hoa don nay da duoc dong du, khong can chuyen khoan them.");
+            return;
+        }
+        new VietQRDialog(this, hd, false, null).setVisible(true);
     }
 
     private void moThanhToan() {
@@ -268,7 +306,6 @@ public class TraCuuFrame extends JFrame {
             return;
         }
         new ThanhToanOnlineDialog(this, thanhToanService).setVisible(true);
-        // Sau khi dong dialog thanh toan, tai lai du lieu de cap nhat cong no moi nhat.
         thucHienTraCuu();
     }
 

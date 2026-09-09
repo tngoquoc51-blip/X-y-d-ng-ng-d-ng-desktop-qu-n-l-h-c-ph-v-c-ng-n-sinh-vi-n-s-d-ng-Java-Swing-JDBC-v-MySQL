@@ -18,11 +18,11 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Man hinh quan ly tai khoan he thong - ban "desktop quan ly" day du:
- * banner dong bo mau (xanh duong, cung tong voi header), 4 the KPI theo vai
- * tro, tim kiem/loc theo vai tro/trang thai (toolbar GridBagLayout - khong
- * bao gio wrap/chong de), vai tro va trang thai hien thi dang the mau (pill).
- * Chi danh cho vai tro ADMIN.
+ * Màn hình quản lý tài khoản hệ thống - bản "desktop quản lý" đầy đủ:
+ * banner đồng bộ màu (xanh dương, cùng tông với header), 4 thẻ KPI theo vai
+ * trò, tìm kiếm/lọc theo vai trò/trạng thái (toolbar GridBagLayout - không
+ * bao giờ wrap/chồng đè), vai trò và trạng thái hiển thị dạng thẻ màu (pill).
+ * Chỉ dành cho vai trò ADMIN.
  */
 public class TaiKhoanPanel extends JPanel {
     private final TaiKhoanService taiKhoanService = new TaiKhoanService();
@@ -75,10 +75,10 @@ public class TaiKhoanPanel extends JPanel {
         JPanel chuText = new JPanel();
         chuText.setOpaque(false);
         chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
-        JLabel tieuDe = new JLabel("Quan ly tai khoan");
+        JLabel tieuDe = new JLabel("Quản Lý Tài Khoản");
         tieuDe.setFont(UITheme.FONT_TITLE);
         tieuDe.setForeground(Color.WHITE);
-        JLabel phu = new JLabel("Tao, phan quyen, khoa/mo khoa va quan ly tai khoan he thong");
+        JLabel phu = new JLabel("Tạo, phân quyền, khóa/mở khóa và quản lý tài khoản hệ thống");
         phu.setFont(UITheme.FONT_BASE);
         phu.setForeground(new Color(255, 255, 255, 210));
         chuText.add(tieuDe);
@@ -87,7 +87,7 @@ public class TaiKhoanPanel extends JPanel {
         trai.add(chuText, BorderLayout.CENTER);
         banner.add(trai, BorderLayout.WEST);
 
-        JButton btnThem = new JButton("+ Them tai khoan");
+        JButton btnThem = new JButton("+ Thêm Tài Khoản");
         btnThem.setFont(UITheme.FONT_BOLD);
         btnThem.setBackground(Color.WHITE);
         btnThem.setForeground(UITheme.PRIMARY_DARK);
@@ -127,7 +127,7 @@ public class TaiKhoanPanel extends JPanel {
         return badge;
     }
 
-    // ================== KPI THEO VAI TRO ==================
+    // ================== KPI THEO VAI TRÒ ==================
 
     private JPanel buildKpiRow() {
         JPanel row = new JPanel(new GridLayout(1, 4, 16, 0));
@@ -136,10 +136,10 @@ public class TaiKhoanPanel extends JPanel {
         lblSoAdmin = new JLabel("0");
         lblSoKeToan = new JLabel("0");
         lblSoSinhVien = new JLabel("0");
-        row.add(thongKeCard("Tong tai khoan", lblTongTK, UITheme.PRIMARY));
-        row.add(thongKeCard("Quan tri vien", lblSoAdmin, UITheme.TEXT_VIOLET));
-        row.add(thongKeCard("Ke toan", lblSoKeToan, UITheme.WARNING));
-        row.add(thongKeCard("Sinh vien", lblSoSinhVien, UITheme.SUCCESS));
+        row.add(thongKeCard("Tổng Tài Khoản", lblTongTK, UITheme.PRIMARY));
+        row.add(thongKeCard("Quản Trị Viên", lblSoAdmin, UITheme.TEXT_VIOLET));
+        row.add(thongKeCard("Kế Toán", lblSoKeToan, UITheme.WARNING));
+        row.add(thongKeCard("Sinh Viên", lblSoSinhVien, UITheme.SUCCESS));
         return row;
     }
 
@@ -159,7 +159,7 @@ public class TaiKhoanPanel extends JPanel {
         return card;
     }
 
-    // ================== TOOLBAR: GridBagLayout (khong wrap/chong de) ==================
+    // ================== TOOLBAR: GridBagLayout (không wrap/chồng đè) ==================
 
     private JPanel buildToolbar() {
         JPanel toolbar = new JPanel(new GridBagLayout());
@@ -172,10 +172,10 @@ public class TaiKhoanPanel extends JPanel {
         int col = 0;
 
         gbc.gridx = col++;
-        toolbar.add(UIUtils.formLabel("Tim kiem:"), gbc);
+        toolbar.add(UIUtils.formLabel("Tìm kiếm:"), gbc);
 
         txtTimKiem = UIUtils.textField(16);
-        txtTimKiem.setToolTipText("Tim theo ten dang nhap hoac ho ten");
+        txtTimKiem.setToolTipText("Tìm theo tên đăng nhập hoặc họ tên");
         txtTimKiem.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { apDungBoLoc(); }
             @Override public void removeUpdate(DocumentEvent e) { apDungBoLoc(); }
@@ -185,18 +185,18 @@ public class TaiKhoanPanel extends JPanel {
         toolbar.add(txtTimKiem, gbc);
 
         gbc.gridx = col++;
-        toolbar.add(UIUtils.formLabel("Vai tro:"), gbc);
+        toolbar.add(UIUtils.formLabel("Vai trò:"), gbc);
 
-        cboVaiTro = new JComboBox<>(new String[]{"Tat ca vai tro", "ADMIN", "KETOAN", "SINHVIEN"});
+        cboVaiTro = new JComboBox<>(new String[]{"Tất cả vai trò", "ADMIN", "KETOAN", "SINHVIEN"});
         cboVaiTro.setFont(UITheme.FONT_BASE);
         cboVaiTro.addActionListener(e -> apDungBoLoc());
         gbc.gridx = col++;
         toolbar.add(cboVaiTro, gbc);
 
         gbc.gridx = col++;
-        toolbar.add(UIUtils.formLabel("Trang thai:"), gbc);
+        toolbar.add(UIUtils.formLabel("Trạng thái:"), gbc);
 
-        cboTrangThai = new JComboBox<>(new String[]{"Tat ca trang thai", "Hoat dong", "Da khoa"});
+        cboTrangThai = new JComboBox<>(new String[]{"Tất cả trạng thái", "Hoạt động", "Đã khóa"});
         cboTrangThai.setFont(UITheme.FONT_BASE);
         cboTrangThai.addActionListener(e -> apDungBoLoc());
         gbc.gridx = col++;
@@ -206,15 +206,15 @@ public class TaiKhoanPanel extends JPanel {
         return toolbar;
     }
 
-    // ================== BANG DU LIEU (7 cot, co Gmail lien ket) ==================
+    // ================== BẢNG DỮ LIỆU (7 cột, có Gmail liên kết) ==================
 
     private JPanel buildTableCard() {
         JPanel card = UITheme.card();
         card.setLayout(new BorderLayout(0, 10));
 
         tableModel = new DefaultTableModel(
-                new Object[]{"Ma TK", "Ten dang nhap", "Ho ten", "Vai tro",
-                        "Ma SV lien ket", "Gmail lien ket", "Trang thai"}, 0) {
+                new Object[]{"Mã TK", "Tên Đăng Nhập", "Họ Tên", "Vai Trò",
+                        "Mã SV Liên Kết", "Gmail Liên Kết", "Trạng Thái"}, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -231,8 +231,8 @@ public class TaiKhoanPanel extends JPanel {
         table.getSelectionModel().addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) return;
             int row = table.getSelectedRow();
-            lblDaChon.setText(row < 0 ? "Chua chon tai khoan nao"
-                    : "Da chon: " + table.getValueAt(row, 1) + " - " + table.getValueAt(row, 2));
+            lblDaChon.setText(row < 0 ? "Chưa chọn tài khoản nào"
+                    : "Đã chọn: " + table.getValueAt(row, 1) + " - " + table.getValueAt(row, 2));
         });
 
         JScrollPane scroll = new JScrollPane(table);
@@ -245,10 +245,10 @@ public class TaiKhoanPanel extends JPanel {
         JPanel footerTrai = new JPanel();
         footerTrai.setOpaque(false);
         footerTrai.setLayout(new BoxLayout(footerTrai, BoxLayout.Y_AXIS));
-        lblSoLuong = new JLabel("Hien thi 0 / 0 tai khoan");
+        lblSoLuong = new JLabel("Hiển thị 0 / 0 tài khoản");
         lblSoLuong.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblSoLuong.setForeground(UITheme.TEXT_MUTED);
-        lblDaChon = new JLabel("Chua chon tai khoan nao");
+        lblDaChon = new JLabel("Chưa chọn tài khoản nào");
         lblDaChon.setFont(UITheme.FONT_BASE);
         lblDaChon.setForeground(UITheme.TEXT_MUTED);
         footerTrai.add(lblSoLuong);
@@ -257,20 +257,23 @@ public class TaiKhoanPanel extends JPanel {
 
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
         toolbar.setOpaque(false);
-        JButton btnSua = UITheme.secondaryButton("Sua thong tin");
-        JButton btnDoiMatKhau = UITheme.secondaryButton("Doi mat khau");
-        JButton btnKhoaMoKhoa = UITheme.secondaryButton("Khoa / Mo khoa");
-        JButton btnXoa = UITheme.dangerButton("Xoa tai khoan");
+        JButton btnSua = mauButton("Sửa Thông Tin", UITheme.PRIMARY);
+        JButton btnDoiMatKhau = mauButton("Đổi Mật Khẩu", new Color(0x0E, 0xA5, 0xE9)); // xanh dương trời - riêng biệt
+        JButton btnKhoaMoKhoa = mauButton("Khóa / Mở Khóa", UITheme.WARNING);
+        JButton btnXoa = UITheme.dangerButton("Xóa Tài Khoản");
 
         btnSua.addActionListener(e -> moFormSua());
         btnDoiMatKhau.addActionListener(e -> doiMatKhau());
         btnKhoaMoKhoa.addActionListener(e -> khoaMoKhoa());
         btnXoa.addActionListener(e -> xoaTaiKhoan());
 
+        JButton btnTheQR = mauButton("The QR dang nhap", new Color(0x7C, 0x3A, 0xED));
+        btnTheQR.addActionListener(e -> moTheQR());
         toolbar.add(btnSua);
         toolbar.add(btnDoiMatKhau);
         toolbar.add(btnKhoaMoKhoa);
         toolbar.add(btnXoa);
+        toolbar.add(btnTheQR);
         footer.add(toolbar, BorderLayout.EAST);
 
         card.add(footer, BorderLayout.SOUTH);
@@ -278,7 +281,7 @@ public class TaiKhoanPanel extends JPanel {
         return card;
     }
 
-    /** Vai tro hien thi dang the mau (pill) thay vi chu enum tho: ADMIN/KETOAN/SINHVIEN. */
+    /** Vai trò hiển thị dạng thẻ màu (pill) thay vì chữ enum thô: ADMIN/KETOAN/SINHVIEN. */
     private DefaultTableCellRenderer vaiTroCellRenderer() {
         return new DefaultTableCellRenderer() {
             @Override
@@ -294,11 +297,11 @@ public class TaiKhoanPanel extends JPanel {
                 String nhan;
                 Color bg, fg;
                 if (vt == VaiTro.ADMIN) {
-                    nhan = "Quan tri vien"; bg = UITheme.TINT_VIOLET; fg = UITheme.TEXT_VIOLET;
+                    nhan = "Quản trị viên"; bg = UITheme.TINT_VIOLET; fg = UITheme.TEXT_VIOLET;
                 } else if (vt == VaiTro.KETOAN) {
-                    nhan = "Ke toan"; bg = new Color(0xFD, 0xF3, 0xDA); fg = UITheme.WARNING;
+                    nhan = "Kế toán"; bg = new Color(0xFD, 0xF3, 0xDA); fg = UITheme.WARNING;
                 } else {
-                    nhan = "Sinh vien"; bg = UITheme.TINT_GREEN; fg = UITheme.TEXT_GREEN;
+                    nhan = "Sinh viên"; bg = UITheme.TINT_GREEN; fg = UITheme.TEXT_GREEN;
                 }
                 label.setText(nhan);
                 if (!isSelected) {
@@ -310,7 +313,7 @@ public class TaiKhoanPanel extends JPanel {
         };
     }
 
-    /** Trang thai hien thi dang the mau (pill): xanh = Hoat dong, do = Da khoa. */
+    /** Trạng thái hiển thị dạng thẻ màu (pill): xanh = Hoạt động, đỏ = Đã khóa. */
     private DefaultTableCellRenderer trangThaiCellRenderer() {
         return new DefaultTableCellRenderer() {
             @Override
@@ -321,7 +324,7 @@ public class TaiKhoanPanel extends JPanel {
                 label.setFont(UITheme.FONT_BOLD);
                 label.setOpaque(true);
                 label.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-                boolean hoatDong = "Hoat dong".equals(value);
+                boolean hoatDong = "Hoạt động".equals(value);
                 if (!isSelected) {
                     label.setBackground(hoatDong ? UITheme.TINT_GREEN : new Color(0xFC, 0xE4, 0xE4));
                     label.setForeground(hoatDong ? UITheme.TEXT_GREEN : UITheme.DANGER);
@@ -331,7 +334,7 @@ public class TaiKhoanPanel extends JPanel {
         };
     }
 
-    // ================== TIM KIEM / LOC ==================
+    // ================== TÌM KIẾM / LỌC ==================
 
     private void apDungBoLoc() {
         List<RowFilter<Object, Object>> danhSachLoc = new ArrayList<>();
@@ -341,11 +344,11 @@ public class TaiKhoanPanel extends JPanel {
             danhSachLoc.add(RowFilter.regexFilter("(?i)" + Pattern.quote(tuKhoa), 1, 2));
         }
         String vaiTro = (String) cboVaiTro.getSelectedItem();
-        if (vaiTro != null && !vaiTro.equals("Tat ca vai tro")) {
+        if (vaiTro != null && !vaiTro.equals("Tất cả vai trò")) {
             danhSachLoc.add(RowFilter.regexFilter("^" + Pattern.quote(vaiTro) + "$", 3));
         }
         String trangThai = (String) cboTrangThai.getSelectedItem();
-        if (trangThai != null && !trangThai.equals("Tat ca trang thai")) {
+        if (trangThai != null && !trangThai.equals("Tất cả trạng thái")) {
             danhSachLoc.add(RowFilter.regexFilter("^" + Pattern.quote(trangThai) + "$", 6));
         }
 
@@ -354,10 +357,10 @@ public class TaiKhoanPanel extends JPanel {
     }
 
     private void capNhatSoLuongHienThi() {
-        lblSoLuong.setText("Hien thi " + table.getRowCount() + " / " + tableModel.getRowCount() + " tai khoan");
+        lblSoLuong.setText("Hiển thị " + table.getRowCount() + " / " + tableModel.getRowCount() + " tài khoản");
     }
 
-    // ================== TAI DU LIEU ==================
+    // ================== TẢI DỮ LIỆU ==================
 
     private void taiDuLieu() {
         SwingWorker<List<TaiKhoan>, Void> worker = new SwingWorker<>() {
@@ -377,7 +380,7 @@ public class TaiKhoanPanel extends JPanel {
                                 tk.getMaTK(), tk.getTenDangNhap(), tk.getHoTen(), tk.getVaiTro(),
                                 tk.getMaSV() == null ? "" : tk.getMaSV(),
                                 tk.getGoogleEmail() == null ? "" : tk.getGoogleEmail(),
-                                tk.isTrangThai() ? "Hoat dong" : "Da khoa"
+                                tk.isTrangThai() ? "Hoạt động" : "Đã khóa"
                         });
                         if (tk.getVaiTro() == VaiTro.ADMIN) soAdmin++;
                         else if (tk.getVaiTro() == VaiTro.KETOAN) soKeToan++;
@@ -390,7 +393,7 @@ public class TaiKhoanPanel extends JPanel {
 
                     apDungBoLoc();
                 } catch (Exception ex) {
-                    UIUtils.thongBaoLoi(TaiKhoanPanel.this, "Khong the tai danh sach tai khoan.");
+                    UIUtils.thongBaoLoi(TaiKhoanPanel.this, "Không thể tải danh sách tài khoản.");
                 }
             }
         };
@@ -400,7 +403,7 @@ public class TaiKhoanPanel extends JPanel {
     private TaiKhoan layTaiKhoanDangChon() {
         int viewRow = table.getSelectedRow();
         if (viewRow < 0) {
-            UIUtils.thongBaoLoi(this, "Vui long chon 1 tai khoan trong bang");
+            UIUtils.thongBaoLoi(this, "Vui lòng chọn 1 tài khoản trong bảng");
             return null;
         }
         int row = table.convertRowIndexToModel(viewRow);
@@ -413,11 +416,11 @@ public class TaiKhoanPanel extends JPanel {
         tk.setMaSV(maSV == null || maSV.isBlank() ? null : maSV);
         String googleEmail = (String) tableModel.getValueAt(row, 5);
         tk.setGoogleEmail(googleEmail == null || googleEmail.isBlank() ? null : googleEmail);
-        tk.setTrangThai("Hoat dong".equals(tableModel.getValueAt(row, 6)));
+        tk.setTrangThai("Hoạt động".equals(tableModel.getValueAt(row, 6)));
         return tk;
     }
 
-    // ================== THEM / SUA / DOI MAT KHAU / KHOA / XOA (giu nguyen logic cu) ==================
+    // ================== THÊM / SỬA / ĐỔI MẬT KHẨU / KHÓA / XÓA (giữ nguyên logic cũ) ==================
 
     private void moFormThem() {
         TaiKhoanFormDialog dialog = new TaiKhoanFormDialog(
@@ -435,7 +438,7 @@ public class TaiKhoanPanel extends JPanel {
                             try {
                                 get();
                                 taiDuLieu();
-                                UIUtils.thongBao(TaiKhoanPanel.this, "Da them tai khoan " + tenDangNhap);
+                                UIUtils.thongBao(TaiKhoanPanel.this, "Đã thêm tài khoản " + tenDangNhap);
                             } catch (Exception ex) {
                                 UIUtils.thongBaoLoi(TaiKhoanPanel.this, rootMessage(ex));
                             }
@@ -467,7 +470,7 @@ public class TaiKhoanPanel extends JPanel {
                             try {
                                 get();
                                 taiDuLieu();
-                                UIUtils.thongBao(TaiKhoanPanel.this, "Da cap nhat tai khoan");
+                                UIUtils.thongBao(TaiKhoanPanel.this, "Đã cập nhật tài khoản");
                             } catch (Exception ex) {
                                 UIUtils.thongBaoLoi(TaiKhoanPanel.this, rootMessage(ex));
                             }
@@ -477,36 +480,42 @@ public class TaiKhoanPanel extends JPanel {
                 });
         dialog.setVisible(true);
     }
+    private void moTheQR() {
+        TaiKhoan tk = layTaiKhoanDangChon();
+        if (tk == null) return;
+        if (tk.getVaiTro() != vn.edu.eaut.qlhocphi.model.VaiTro.SINHVIEN) {
+            UIUtils.thongBaoLoi(this, "The QR dang nhap chi ap dung cho tai khoan Sinh vien.");
+            return;
+        }
+        new TheQRDangNhapDialog((Frame) SwingUtilities.getWindowAncestor(this), tk).setVisible(true);
+    }
 
     private void doiMatKhau() {
         TaiKhoan tk = layTaiKhoanDangChon();
         if (tk == null) return;
 
-        JPasswordField txtMatKhauMoi = new JPasswordField(18);
-        int ketQua = JOptionPane.showConfirmDialog(this, txtMatKhauMoi,
-                "Doi mat khau cho " + tk.getTenDangNhap() + " (toi thieu 6 ky tu)",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (ketQua != JOptionPane.OK_OPTION) return;
-
-        String matKhauMoi = new String(txtMatKhauMoi.getPassword());
-        SwingWorker<Void, Void> worker = new SwingWorker<>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-                taiKhoanService.doiMatKhau(tk.getMaTK(), matKhauMoi);
-                return null;
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    get();
-                    UIUtils.thongBao(TaiKhoanPanel.this, "Da doi mat khau cho " + tk.getTenDangNhap());
-                } catch (Exception ex) {
-                    UIUtils.thongBaoLoi(TaiKhoanPanel.this, rootMessage(ex));
+        AdminDoiMatKhauDialog dialog = new AdminDoiMatKhauDialog(
+                (Frame) SwingUtilities.getWindowAncestor(this), tk.getTenDangNhap(), matKhauMoi -> {
+            SwingWorker<Void, Void> worker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    taiKhoanService.doiMatKhau(tk.getMaTK(), matKhauMoi);
+                    return null;
                 }
-            }
-        };
-        worker.execute();
+
+                @Override
+                protected void done() {
+                    try {
+                        get();
+                        UIUtils.thongBao(TaiKhoanPanel.this, "Đã đổi mật khẩu cho " + tk.getTenDangNhap());
+                    } catch (Exception ex) {
+                        UIUtils.thongBaoLoi(TaiKhoanPanel.this, rootMessage(ex));
+                    }
+                }
+            };
+            worker.execute();
+        });
+        dialog.setVisible(true);
     }
 
     private void khoaMoKhoa() {
@@ -514,7 +523,7 @@ public class TaiKhoanPanel extends JPanel {
         if (tk == null) return;
 
         if (tk.getMaTK() == taiKhoanDangDangNhap.getMaTK()) {
-            UIUtils.thongBaoLoi(this, "Khong the tu khoa tai khoan dang dang nhap");
+            UIUtils.thongBaoLoi(this, "Không thể tự khóa tài khoản đang đăng nhập");
             return;
         }
 
@@ -532,7 +541,7 @@ public class TaiKhoanPanel extends JPanel {
                     get();
                     taiDuLieu();
                     UIUtils.thongBao(TaiKhoanPanel.this,
-                            trangThaiMoi ? "Da mo khoa tai khoan" : "Da khoa tai khoan");
+                            trangThaiMoi ? "Đã mở khóa tài khoản" : "Đã khóa tài khoản");
                 } catch (Exception ex) {
                     UIUtils.thongBaoLoi(TaiKhoanPanel.this, rootMessage(ex));
                 }
@@ -546,8 +555,8 @@ public class TaiKhoanPanel extends JPanel {
         if (tk == null) return;
 
         int xacNhan = JOptionPane.showConfirmDialog(this,
-                "Xoa vinh vien tai khoan " + tk.getTenDangNhap() + "?",
-                "Xac nhan xoa", JOptionPane.YES_NO_OPTION);
+                "Xóa vĩnh viễn tài khoản " + tk.getTenDangNhap() + "?",
+                "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
         if (xacNhan != JOptionPane.YES_OPTION) return;
 
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
@@ -562,13 +571,30 @@ public class TaiKhoanPanel extends JPanel {
                 try {
                     get();
                     taiDuLieu();
-                    UIUtils.thongBao(TaiKhoanPanel.this, "Da xoa tai khoan " + tk.getTenDangNhap());
+                    UIUtils.thongBao(TaiKhoanPanel.this, "Đã xóa tài khoản " + tk.getTenDangNhap());
                 } catch (Exception ex) {
                     UIUtils.thongBaoLoi(TaiKhoanPanel.this, rootMessage(ex));
                 }
             }
         };
         worker.execute();
+    }
+
+
+    /** Tạo 1 nút màu tùy chỉnh (không có sẵn trong UITheme) - dùng để mỗi nút hành động
+     *  có 1 màu riêng biệt, dễ phân biệt nhanh: Sửa (xanh dậm), Đổi mật khẩu (xanh trời),
+     *  Khóa/Mở khóa (cam), Xóa (đỏ - dùng sẵn UITheme.dangerButton). */
+    private JButton mauButton(String text, Color mau) {
+        JButton b = new JButton(text);
+        b.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        b.setBackground(mau);
+        b.setForeground(Color.WHITE);
+        b.setBorder(BorderFactory.createEmptyBorder(9, 20, 9, 20));
+        b.setFocusPainted(false);
+        b.setOpaque(true);
+        b.setBorderPainted(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return b;
     }
 
     private String rootMessage(Exception ex) {

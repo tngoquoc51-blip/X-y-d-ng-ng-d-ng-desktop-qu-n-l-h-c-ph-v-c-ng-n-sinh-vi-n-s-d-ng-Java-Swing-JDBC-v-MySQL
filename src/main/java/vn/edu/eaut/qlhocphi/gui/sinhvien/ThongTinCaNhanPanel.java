@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import vn.edu.eaut.qlhocphi.bus.SinhVienService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
+import vn.edu.eaut.qlhocphi.gui.common.AutoRefreshTimer;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.model.SinhVien;
 import vn.edu.eaut.qlhocphi.model.TaiKhoan;
@@ -81,6 +82,7 @@ public class ThongTinCaNhanPanel extends JPanel {
         add(scroll, BorderLayout.CENTER);
 
         taiDuLieu();
+        AutoRefreshTimer.gan(this, 30, this::taiDuLieu);
     }
 
     private JPanel bocNgoai(JPanel noiDung) {

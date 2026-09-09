@@ -2,19 +2,26 @@ package vn.edu.eaut.qlhocphi.gui.chatbot;
 
 import vn.edu.eaut.qlhocphi.ai.ChatMessage;
 import vn.edu.eaut.qlhocphi.ai.ChatbotService;
+import vn.edu.eaut.qlhocphi.ai.KetQuaTraLoi;
 import vn.edu.eaut.qlhocphi.config.UITheme;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.nio.file.Files;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
+import java.util.Locale;
 
 /**
- * Man hinh Tro ly AI (Chatbot) - ban nang cap "desktop": banner gradient dong
- * bo mau toan he thong, bong bong chat bo goc that su (ve bang Graphics2D)
- * kem avatar rieng cho nguoi dung/bot va gio gui, hang cau hoi goi y bam la
- * gui luon, va nut xoa hoi thoai. Goi ChatbotService.traLoi(...) trong
- * SwingWorker de khong treo giao dien khi cho phan hoi.
+ * Man hinh Tro ly AI (Chatbot) - ban tro chuyen TU DO (khong chi gioi han hoi cong no)
+ * va co the dinh kem 1 anh de hoi AI phan tich (Vision). Banner gradient, bong bong
+ * chat bo goc, avatar rieng bot/nguoi dung, chip cau hoi goi y, xoa hoi thoai.
+ * Goi ChatbotService trong SwingWorker de khong treo giao dien.
  */
 public class ChatbotPanel extends JPanel {
     private final ChatbotService chatbotService = new ChatbotService();
@@ -22,14 +29,19 @@ public class ChatbotPanel extends JPanel {
 
     private static final String[] CAU_HOI_GOI_Y = {
             "Cong no cua SV001 con bao nhieu?",
-            "Cach thanh toan hoc phi?",
-            "Xin chao"
+            "Ke cho toi 1 cau chuyen cuoi ngan",
+            "Cach thanh toan hoc phi?"
     };
 
     private JPanel khungHoiThoai;
     private JScrollPane scrollPane;
     private JTextField txtNhap;
     private JButton btnGui;
+    private JButton btnDinhKem;
+
+    private JPanel hangXemTruocAnh;
+    private JLabel lblTenFileAnh;
+    private File anhDinhKem;
 
     public ChatbotPanel() {
         setLayout(new BorderLayout(0, 16));
@@ -39,11 +51,11 @@ public class ChatbotPanel extends JPanel {
         add(buildChatCard(), BorderLayout.CENTER);
 
         themTinNhan(new ChatMessage(ChatMessage.Nguon.CHATBOT,
-                "Xin chao! Toi la tro ly ao ho tro tra cuu cong no va hoc phi. "
-                        + "Ban co the hoi vi du: \"Cong no cua SV001 con bao nhieu?\""));
+                "Xin chao! Toi co the tro chuyen ve BAT KY chu de nao ban muon, khong chi rieng hoc phi. "
+                        + "Ban cung co the bam icon ghim \uD83D\uDCCE de gui kem 1 anh cho toi xem."));
     }
 
-    // ================== HEADER (banner + logo, dong bo cac trang khac) ==================
+    // ================== HEADER (banner + logo) ==================
 
     private JPanel buildHeader() {
         JPanel banner = UITheme.gradientBanner();
@@ -58,10 +70,10 @@ public class ChatbotPanel extends JPanel {
         JPanel chuText = new JPanel();
         chuText.setOpaque(false);
         chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
-        JLabel tieuDe = new JLabel("Tro ly AI (Chatbot)");
+        JLabel tieuDe = new JLabel("Tro ly AI");
         tieuDe.setFont(UITheme.FONT_TITLE);
         tieuDe.setForeground(Color.WHITE);
-        JLabel phu = new JLabel("Hoi dap nhanh ve cong no, hoc phi va cach thanh toan");
+        JLabel phu = new JLabel("Tro chuyen tu do moi chu de, co the gui kem anh de hoi");
         phu.setFont(UITheme.FONT_BASE);
         phu.setForeground(new Color(255, 255, 255, 210));
         chuText.add(tieuDe);
@@ -116,6 +128,7 @@ public class ChatbotPanel extends JPanel {
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (xacNhan != JOptionPane.YES_OPTION) return;
         khungHoiThoai.removeAll();
+        xoaAnhDinhKem();
         themTinNhan(new ChatMessage(ChatMessage.Nguon.CHATBOT,
                 "Hoi thoai da duoc lam moi. Toi co the giup gi cho ban?"));
     }
@@ -140,24 +153,38 @@ public class ChatbotPanel extends JPanel {
         duoiCung.setOpaque(false);
         duoiCung.setLayout(new BoxLayout(duoiCung, BoxLayout.Y_AXIS));
 
-        // Hang cau hoi goi y - bam la gui luon, khong can go tay
         JPanel hangGoiY = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         hangGoiY.setOpaque(false);
         for (String cauHoi : CAU_HOI_GOI_Y) {
             hangGoiY.add(taoChipGoiY(cauHoi));
         }
         duoiCung.add(hangGoiY);
-        duoiCung.add(Box.createRigidArea(new Dimension(0, 10)));
+        duoiCung.add(Box.createRigidArea(new Dimension(0, 8)));
+
+        duoiCung.add(buildHangXemTruocAnh());
+        duoiCung.add(Box.createRigidArea(new Dimension(0, 8)));
 
         JPanel inputRow = new JPanel(new BorderLayout(8, 0));
         inputRow.setOpaque(false);
+
+        btnDinhKem = new JButton("\uD83D\uDCCE");
+        btnDinhKem.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+        btnDinhKem.setToolTipText("Dinh kem 1 anh de hoi AI");
+        btnDinhKem.setFocusPainted(false);
+        btnDinhKem.setBackground(UITheme.TINT_VIOLET);
+        btnDinhKem.setForeground(UITheme.TEXT_VIOLET);
+        btnDinhKem.setBorderPainted(false);
+        btnDinhKem.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnDinhKem.addActionListener(e -> chonAnhDinhKem());
+
         txtNhap = UIUtils.textField(20);
-        txtNhap.setToolTipText("Nhap cau hoi, VD: Cong no cua SV001 con bao nhieu?");
+        txtNhap.setToolTipText("Hoi bat ky dieu gi, VD: Cong no cua SV001 con bao nhieu?");
         btnGui = UITheme.primaryButton("Gui");
 
         txtNhap.addActionListener(e -> guiCauHoi(txtNhap.getText()));
         btnGui.addActionListener(e -> guiCauHoi(txtNhap.getText()));
 
+        inputRow.add(btnDinhKem, BorderLayout.WEST);
         inputRow.add(txtNhap, BorderLayout.CENTER);
         inputRow.add(btnGui, BorderLayout.EAST);
         duoiCung.add(inputRow);
@@ -165,6 +192,52 @@ public class ChatbotPanel extends JPanel {
         card.add(duoiCung, BorderLayout.SOUTH);
 
         return card;
+    }
+
+    /** Hang xem truoc anh da chon (thumbnail + ten file + nut xoa) - an mac dinh, chi hien khi co anh dinh kem. */
+    private JPanel buildHangXemTruocAnh() {
+        hangXemTruocAnh = new JPanel(new BorderLayout(8, 0));
+        hangXemTruocAnh.setOpaque(true);
+        hangXemTruocAnh.setBackground(UITheme.TINT_VIOLET);
+        hangXemTruocAnh.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        hangXemTruocAnh.setVisible(false);
+        hangXemTruocAnh.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+
+        lblTenFileAnh = new JLabel();
+        lblTenFileAnh.setFont(UITheme.FONT_BASE);
+        lblTenFileAnh.setForeground(UITheme.TEXT_VIOLET);
+        hangXemTruocAnh.add(lblTenFileAnh, BorderLayout.CENTER);
+
+        JButton btnXoaAnh = new JButton("\u2716 Bo anh");
+        btnXoaAnh.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        btnXoaAnh.setForeground(UITheme.TEXT_VIOLET);
+        btnXoaAnh.setContentAreaFilled(false);
+        btnXoaAnh.setBorderPainted(false);
+        btnXoaAnh.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnXoaAnh.addActionListener(e -> xoaAnhDinhKem());
+        hangXemTruocAnh.add(btnXoaAnh, BorderLayout.EAST);
+
+        return hangXemTruocAnh;
+    }
+
+    private void chonAnhDinhKem() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Chon anh de gui cho Tro ly AI");
+        chooser.setFileFilter(new FileNameExtensionFilter(
+                "Anh (*.png, *.jpg, *.jpeg, *.gif, *.webp)", "png", "jpg", "jpeg", "gif", "webp"));
+        int ketQua = chooser.showOpenDialog(this);
+        if (ketQua != JFileChooser.APPROVE_OPTION) return;
+
+        anhDinhKem = chooser.getSelectedFile();
+        lblTenFileAnh.setText("\uD83D\uDDBC " + anhDinhKem.getName());
+        hangXemTruocAnh.setVisible(true);
+        hangXemTruocAnh.revalidate();
+    }
+
+    private void xoaAnhDinhKem() {
+        anhDinhKem = null;
+        hangXemTruocAnh.setVisible(false);
+        hangXemTruocAnh.revalidate();
     }
 
     /** Chip bo tron mau tim nhat - bam vao la gui thang cau hoi goi y, khong can go tay. */
@@ -194,19 +267,38 @@ public class ChatbotPanel extends JPanel {
     // ================== GUI / NHAN TIN NHAN ==================
 
     private void guiCauHoi(String cauHoiTho) {
-        String cauHoi = cauHoiTho.trim();
-        if (cauHoi.isEmpty()) return;
+        String cauHoi = cauHoiTho == null ? "" : cauHoiTho.trim();
+        if (cauHoi.isEmpty() && anhDinhKem == null) return;
 
-        themTinNhan(new ChatMessage(ChatMessage.Nguon.NGUOI_DUNG, cauHoi));
+        File anhDangGui = anhDinhKem;
+
+        if (anhDangGui != null) {
+            themTinNhanNguoiDungVoiAnh(cauHoi.isEmpty() ? "(Da gui 1 anh)" : cauHoi, anhDangGui);
+        } else {
+            themTinNhan(new ChatMessage(ChatMessage.Nguon.NGUOI_DUNG, cauHoi));
+        }
+
         txtNhap.setText("");
+        xoaAnhDinhKem();
         txtNhap.setEnabled(false);
         btnGui.setEnabled(false);
+        btnDinhKem.setEnabled(false);
 
         JPanel dongDangTra = themDongDangTraLoi();
 
         SwingWorker<String, Void> worker = new SwingWorker<>() {
             @Override
             protected String doInBackground() {
+                if (anhDangGui != null) {
+                    try {
+                        byte[] bytes = Files.readAllBytes(anhDangGui.toPath());
+                        String base64 = Base64.getEncoder().encodeToString(bytes);
+                        String loaiAnh = xacDinhMediaType(anhDangGui.getName());
+                        return chatbotService.traLoiVoiAnh(cauHoi, base64, loaiAnh);
+                    } catch (Exception ex) {
+                        return "Khong the doc file anh vua chon: " + ex.getMessage();
+                    }
+                }
                 return chatbotService.traLoi(cauHoi);
             }
 
@@ -222,14 +314,23 @@ public class ChatbotPanel extends JPanel {
                 }
                 txtNhap.setEnabled(true);
                 btnGui.setEnabled(true);
+                btnDinhKem.setEnabled(true);
                 txtNhap.requestFocusInWindow();
             }
         };
         worker.execute();
     }
 
+    private String xacDinhMediaType(String tenFile) {
+        String ten = tenFile.toLowerCase(Locale.ROOT);
+        if (ten.endsWith(".png")) return "image/png";
+        if (ten.endsWith(".gif")) return "image/gif";
+        if (ten.endsWith(".webp")) return "image/webp";
+        return "image/jpeg";
+    }
+
     private JPanel themDongDangTraLoi() {
-        JPanel dong = dongTinNhan(false, "Dang tra loi...", null);
+        JPanel dong = dongTinNhan(false, "Dang tra loi...", null, null);
         khungHoiThoai.add(dong);
         khungHoiThoai.add(Box.createRigidArea(new Dimension(0, 10)));
         lamMoiCuon();
@@ -239,18 +340,49 @@ public class ChatbotPanel extends JPanel {
     private void themTinNhan(ChatMessage msg) {
         boolean nguoiDung = msg.getNguon() == ChatMessage.Nguon.NGUOI_DUNG;
         String gio = msg.getThoiGian() != null ? msg.getThoiGian().format(GIO) : "";
-        JPanel dong = dongTinNhan(nguoiDung, msg.getNoiDung(), gio);
+        JPanel dong = dongTinNhan(nguoiDung, msg.getNoiDung(), gio, null);
         khungHoiThoai.add(dong);
         khungHoiThoai.add(Box.createRigidArea(new Dimension(0, 10)));
         lamMoiCuon();
     }
 
-    /** 1 dong chat hoan chinh: avatar + bong bong bo goc + gio, can trai (bot) hoac phai (nguoi dung). */
-    private JPanel dongTinNhan(boolean nguoiDung, String noiDung, String gio) {
+    /** Hien tin nhan cua BOT, kem anh THAT doc tu duong dan tren dia (VD anh dai dien sinh vien) neu co. */
+    private void themTinNhanBot(String vanBan, String duongDanAnh) {
+        BufferedImage anh = null;
+        if (duongDanAnh != null) {
+            try {
+                anh = ImageIO.read(new File(duongDanAnh));
+            } catch (Exception ignored) {
+                // Neu doc anh loi, van hien text binh thuong, khong lam gian doan hoi thoai.
+            }
+        }
+        JPanel dong = dongTinNhan(false, vanBan, java.time.LocalTime.now().format(GIO), anh);
+        khungHoiThoai.add(dong);
+        khungHoiThoai.add(Box.createRigidArea(new Dimension(0, 10)));
+        lamMoiCuon();
+    }
+
+    private void themTinNhanNguoiDungVoiAnh(String noiDung, File fileAnh) {
+        BufferedImage anh = null;
+        try {
+            anh = ImageIO.read(fileAnh);
+        } catch (Exception ignored) {
+            // Neu khong doc duoc anh de HIEN THI (VD dinh dang la), van gui text binh thuong,
+            // viec doc file that su de GUI cho AI da duoc lam rieng trong doInBackground().
+        }
+        JPanel dong = dongTinNhan(true, noiDung,
+                java.time.LocalTime.now().format(GIO), anh);
+        khungHoiThoai.add(dong);
+        khungHoiThoai.add(Box.createRigidArea(new Dimension(0, 10)));
+        lamMoiCuon();
+    }
+
+    /** 1 dong chat hoan chinh: avatar + bong bong bo goc (co the kem anh thu nho) + gio. */
+    private JPanel dongTinNhan(boolean nguoiDung, String noiDung, String gio, BufferedImage anhKem) {
         JPanel dong = new JPanel(new FlowLayout(nguoiDung ? FlowLayout.RIGHT : FlowLayout.LEFT, 8, 0));
         dong.setOpaque(false);
         dong.setAlignmentX(Component.LEFT_ALIGNMENT);
-        dong.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
+        dong.setMaximumSize(new Dimension(Integer.MAX_VALUE, 320));
 
         JComponent avatar = nguoiDung ? avatarNguoiDung() : avatarBot();
 
@@ -259,10 +391,17 @@ public class ChatbotPanel extends JPanel {
         cot.setLayout(new BoxLayout(cot, BoxLayout.Y_AXIS));
 
         RoundedBubble bubble = new RoundedBubble(nguoiDung ? UITheme.PRIMARY : UITheme.BG_MAIN);
-        bubble.setLayout(new BorderLayout());
+        bubble.setLayout(new BorderLayout(0, 8));
         bubble.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
         bubble.setAlignmentX(nguoiDung ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
-        JLabel label = new JLabel("<html><body style='width: 300px'>" + escapeHtml(noiDung) + "</body></html>");
+
+        if (anhKem != null) {
+            JLabel lblAnh = new JLabel(anhThuNho(anhKem, 260, 180));
+            lblAnh.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+            bubble.add(lblAnh, BorderLayout.NORTH);
+        }
+
+        JLabel label = new JLabel("<html><body style='width: 280px'>" + escapeHtml(noiDung) + "</body></html>");
         label.setFont(UITheme.FONT_BASE);
         label.setForeground(nguoiDung ? Color.WHITE : UITheme.TEXT_PRIMARY);
         bubble.add(label, BorderLayout.CENTER);
@@ -285,6 +424,17 @@ public class ChatbotPanel extends JPanel {
             dong.add(cot);
         }
         return dong;
+    }
+
+    private ImageIcon anhThuNho(BufferedImage anhGoc, int maxW, int maxH) {
+        int w = anhGoc.getWidth(), h = anhGoc.getHeight();
+        double tiLe = Math.min((double) maxW / w, (double) maxH / h);
+        if (tiLe < 1) {
+            w = (int) (w * tiLe);
+            h = (int) (h * tiLe);
+        }
+        Image anhThu = anhGoc.getScaledInstance(w, h, Image.SCALE_SMOOTH);
+        return new ImageIcon(anhThu);
     }
 
     private JComponent avatarBot() {
@@ -316,7 +466,7 @@ public class ChatbotPanel extends JPanel {
         return avatar;
     }
 
-    /** Bong bong chat bo goc that su, ve bang Graphics2D thay vi JLabel nen vuong nhu ban cu. */
+    /** Bong bong chat bo goc that su, ve bang Graphics2D. */
     private static class RoundedBubble extends JPanel {
         private final Color mauNen;
         RoundedBubble(Color mauNen) { this.mauNen = mauNen; setOpaque(false); }

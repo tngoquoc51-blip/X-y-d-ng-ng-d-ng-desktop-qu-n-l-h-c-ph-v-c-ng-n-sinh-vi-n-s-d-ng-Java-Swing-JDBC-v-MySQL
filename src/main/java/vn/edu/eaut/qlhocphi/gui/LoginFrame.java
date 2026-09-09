@@ -1,6 +1,7 @@
 package vn.edu.eaut.qlhocphi.gui;
 
 import vn.edu.eaut.qlhocphi.bus.AuthService;
+import vn.edu.eaut.qlhocphi.bus.NhatKyHeThongService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.model.TaiKhoan;
@@ -13,13 +14,14 @@ import java.awt.geom.RoundRectangle2D;
 import java.sql.SQLException;
 
 /**
- * Man hinh dang nhap - toan bo nen la gradient xanh, ben tren la 2 the trang noi:
- *  - The trai: gioi thieu + nut "Tra cuu cong no" (khong can dang nhap)
- *  - The phai: form dang nhap
- * Thao tac xac thuc (goi CSDL) duoc chay bang SwingWorker de khong lam treo giao dien.
+ * Màn hình đăng nhập - toàn bộ nền là gradient xanh, bên trên là 2 thẻ trắng nổi:
+ *  - Thẻ trái: giới thiệu + nút "Tra cứu công nợ" (không cần đăng nhập)
+ *  - Thẻ phải: form đăng nhập
+ * Thao tác xác thực (gọi CSDL) được chạy bằng SwingWorker để không làm treo giao diện.
  */
 public class LoginFrame extends JFrame {
     private final AuthService authService = new AuthService();
+    private final NhatKyHeThongService nhatKyHeThongService = new NhatKyHeThongService();
 
     private JTextField txtTenDangNhap;
     private JPasswordField txtMatKhau;
@@ -27,16 +29,17 @@ public class LoginFrame extends JFrame {
     private JLabel lblThongBao;
 
     public LoginFrame() {
-        setTitle("Dang nhap - He thong quan ly hoc phi");
+        setTitle("Đăng Nhập - Hệ Thống Quản Lý Học Phí");
         setSize(1040, 680);
         setMinimumSize(new Dimension(820, 600));
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
         setContentPane(buildNenGradient());
     }
 
-    /** Nen toan man hinh: gradient xanh dam -> xanh sang, chua tieu de + 2 the trang. */
+    /** Nền toàn màn hình: gradient xanh đậm -> xanh sáng, chứa tiêu đề + 2 thẻ trắng. */
     private JPanel buildNenGradient() {
         JPanel nen = new JPanel(new GridBagLayout()) {
             @Override
@@ -47,8 +50,9 @@ public class LoginFrame extends JFrame {
                         getWidth(), getHeight(), UITheme.PRIMARY);
                 g2.setPaint(gp);
                 g2.fillRect(0, 0, getWidth(), getHeight());
+                UITheme.veHoaTietHocTap(g2, getWidth(), getHeight());
                 g2.dispose();
-                // KHONG goi super.paintComponent(g) o day - vi panel opaque se ve de len gradient vua ve.
+                // KHÔNG gọi super.paintComponent(g) ở đây - vì panel opaque sẽ vẽ đè lên gradient vừa vẽ.
             }
         };
         nen.setOpaque(false);
@@ -67,7 +71,7 @@ public class LoginFrame extends JFrame {
         return nen;
     }
 
-    // ================== Tieu de tren cung (chu dam, tren nen xanh) ==================
+    // ================== Tiêu đề trên cùng (chữ đậm, trên nền xanh) ==================
 
     private JPanel buildTieuDeTren() {
         JPanel box = new JPanel();
@@ -90,13 +94,13 @@ public class LoginFrame extends JFrame {
         icon.setMaximumSize(new Dimension(56, 56));
         icon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel lblTitle = new JLabel("HE THONG QUAN LY HOC PHI VA CONG NO SINH VIEN", SwingConstants.CENTER);
+        JLabel lblTitle = new JLabel("HỆ THỐNG QUẢN LÝ HỌC PHÍ VÀ CÔNG NỢ SINH VIÊN", SwingConstants.CENTER);
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 26));
         lblTitle.setForeground(Color.WHITE);
         lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblTitle.setBorder(new EmptyBorder(14, 0, 6, 0));
 
-        JLabel lblSub = new JLabel("Tra cuu cong no va thanh toan hoc phi nhanh chong, chinh xac", SwingConstants.CENTER);
+        JLabel lblSub = new JLabel("Tra Cứu Công Nợ Và Thanh Toán Học Phí Nhanh Chóng, Chính Xác", SwingConstants.CENTER);
         lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         lblSub.setForeground(new Color(0xDC, 0xE7, 0xFF));
         lblSub.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -107,7 +111,7 @@ public class LoginFrame extends JFrame {
         return box;
     }
 
-    // ================== 2 the trang nam ngang ==================
+    // ================== 2 thẻ trắng nằm ngang ==================
 
     private JPanel buildHang2The() {
         JPanel hang = new JPanel();
@@ -128,7 +132,7 @@ public class LoginFrame extends JFrame {
         return hang;
     }
 
-    /** Tao 1 "the" (card) trang, bo goc, co do bong nhe, do rong co dinh. */
+    /** Tạo 1 "thẻ" (card) trắng, bo góc, có đổ bóng nhẹ, độ rộng cố định. */
     private JPanel theTrang(int rong) {
         JPanel the = new JPanel() {
             @Override
@@ -153,13 +157,13 @@ public class LoginFrame extends JFrame {
         JLabel iconTron = iconTronMau("\uD83D\uDC65", UITheme.PRIMARY, 40);
         iconTron.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel tieuDe = new JLabel("DANH CHO SINH VIEN TRA CUU");
+        JLabel tieuDe = new JLabel("DÀNH CHO SINH VIÊN TRA CỨU");
         tieuDe.setFont(new Font("Segoe UI", Font.BOLD, 18));
         tieuDe.setForeground(UITheme.TEXT_PRIMARY);
         tieuDe.setAlignmentX(Component.LEFT_ALIGNMENT);
         tieuDe.setBorder(new EmptyBorder(12, 0, 6, 0));
 
-        JLabel moTa = new JLabel("<html>Khong can tai khoan - chi can nhap Ma SV<br>de xem cong no va thanh toan truc tuyen.</html>");
+        JLabel moTa = new JLabel("<html></html>");
         moTa.setFont(UITheme.FONT_BASE);
         moTa.setForeground(UITheme.TEXT_MUTED);
         moTa.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -168,15 +172,15 @@ public class LoginFrame extends JFrame {
         the.add(iconTron);
         the.add(tieuDe);
         the.add(moTa);
-        the.add(dongBuoc("1", "Nhap Ma sinh vien de tra cuu"));
+        the.add(dongBuoc("1", "Nhập Mã Sinh Viên Để Tra Cứu"));
         the.add(Box.createRigidArea(new Dimension(0, 10)));
-        the.add(dongBuoc("2", "Xem danh sach hoa don va cong no"));
+        the.add(dongBuoc("2", "Xem Danh Sách Hóa Đơn Và Công Nợ"));
         the.add(Box.createRigidArea(new Dimension(0, 10)));
-        the.add(dongBuoc("3", "Thanh toan truc tuyen (mo phong)"));
+        the.add(dongBuoc("3", "Thanh Toán Trực Tuyến (Mô Phỏng)"));
         the.add(Box.createVerticalGlue());
         the.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        JButton btnTraCuu = UITheme.primaryButton("DANG NHAP SINH VIEN");
+        JButton btnTraCuu = UITheme.primaryButton("ĐĂNG NHẬP SINH VIÊN");
         btnTraCuu.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnTraCuu.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
         btnTraCuu.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -188,7 +192,7 @@ public class LoginFrame extends JFrame {
         JLabel iconTron = iconTronMau("\uD83D\uDD12", UITheme.PRIMARY, 52);
         iconTron.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel lblTitle = new JLabel("DANG NHAP");
+        JLabel lblTitle = new JLabel("ĐĂNG NHẬP");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblTitle.setForeground(UITheme.TEXT_PRIMARY);
         lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -207,16 +211,16 @@ public class LoginFrame extends JFrame {
         lblThongBao.setFont(UITheme.FONT_BASE);
         lblThongBao.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        btnDangNhap = UITheme.primaryButton("DANG NHAP");
+        btnDangNhap = UITheme.primaryButton("ĐĂNG NHẬP");
         btnDangNhap.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnDangNhap.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnDangNhap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
 
-        JLabel lblTenDangNhap = boldLabel("Ten dang nhap");
+        JLabel lblTenDangNhap = boldLabel("Tên Đăng Nhập");
         lblTenDangNhap.setHorizontalAlignment(SwingConstants.CENTER);
         lblTenDangNhap.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel lblMatKhau = boldLabel("Mat khau");
+        JLabel lblMatKhau = boldLabel("Mật Khẩu");
         lblMatKhau.setHorizontalAlignment(SwingConstants.CENTER);
         lblMatKhau.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -225,7 +229,13 @@ public class LoginFrame extends JFrame {
         txtTenDangNhap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
         txtMatKhau.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
 
-        // Bam Enter o o Ten dang nhap -> nhay xuong o Mat khau (khong submit form)
+        JButton lnkQuenMK = UITheme.lienKetChu("Quên Mật Khẩu?");
+        lnkQuenMK.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lnkQuenMK.addActionListener(e ->
+                new vn.edu.eaut.qlhocphi.gui.sinhvien.QuenMatKhauDialog(this, this::moTiepSauKhiKhoiPhuc)
+                        .setVisible(true));
+
+        // Bấm Enter ở ô Tên đăng nhập -> nhảy xuống ô Mật khẩu (không submit form)
         txtTenDangNhap.addActionListener(e -> txtMatKhau.requestFocusInWindow());
 
         the.add(iconTron);
@@ -237,13 +247,35 @@ public class LoginFrame extends JFrame {
         the.add(lblMatKhau);
         the.add(Box.createRigidArea(new Dimension(0, 6)));
         the.add(txtMatKhau);
-        the.add(Box.createRigidArea(new Dimension(0, 10)));
+        the.add(Box.createRigidArea(new Dimension(0, 6)));
+        the.add(lnkQuenMK);
+        the.add(Box.createRigidArea(new Dimension(0, 6)));
         the.add(lblThongBao);
         the.add(Box.createVerticalGlue());
         the.add(btnDangNhap);
 
         btnDangNhap.addActionListener(e -> thucHienDangNhap());
         getRootPane().setDefaultButton(btnDangNhap);
+    }
+
+    /**
+     * Sau khi "Quên mật khẩu" (mở từ panel Đăng nhập Admin/Kế toán) xác minh thành
+     * công 1 tài khoản: nếu tài khoản đó đang bật cờ "bắt buộc đổi mật khẩu" (luôn
+     * đúng ngay sau khi khôi phục), mở dialog đổi mật khẩu trước, chỉ mở MainFrame
+     * SAU KHI đổi xong; nếu không thì vào thẳng.
+     */
+    private void moTiepSauKhiKhoiPhuc(TaiKhoan tk) {
+        if (tk.isBatBuocDoiMatKhau()) {
+            vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog dialog =
+                    new vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog(this, tk, true, () -> {
+                        new MainFrame(tk).setVisible(true);
+                        dispose();
+                    });
+            dialog.setVisible(true);
+        } else {
+            new MainFrame(tk).setVisible(true);
+            dispose();
+        }
     }
 
     private JLabel boldLabel(String text) {
@@ -303,17 +335,17 @@ public class LoginFrame extends JFrame {
         return dong;
     }
 
-    // ================== Hang tinh nang duoi cung (tren nen xanh) ==================
+    // ================== Hàng tính năng dưới cùng (trên nền xanh) ==================
 
     private JPanel buildHangTinhNang() {
         JPanel hang = new JPanel(new GridLayout(1, 4, 18, 0));
         hang.setOpaque(false);
         hang.setMaximumSize(new Dimension(840, 60));
 
-        hang.add(tinhNang("\uD83D\uDEE1\uFE0F", "Bao mat tuyet doi"));
-        hang.add(tinhNang("\uD83D\uDD10", "Thanh toan an toan"));
-        hang.add(tinhNang("\uD83C\uDFA7", "Ho tro 24/7"));
-        hang.add(tinhNang("\u2705", "Xac nhan nhanh chong"));
+        hang.add(tinhNang("\uD83D\uDEE1\uFE0F", "Bảo Mật Tuyệt Đối"));
+        hang.add(tinhNang("\uD83D\uDD10", "Thanh Toán An Toàn"));
+        hang.add(tinhNang("\uD83C\uDFA7", "Hỗ Trợ 24/7"));
+        hang.add(tinhNang("\u2705", "Xác Nhận Nhanh Chóng"));
         return hang;
     }
 
@@ -330,20 +362,20 @@ public class LoginFrame extends JFrame {
         return p;
     }
 
-    // ================== Xu ly dang nhap ==================
+    // ================== Xử lý đăng nhập ==================
 
     private void thucHienDangNhap() {
         String tenDangNhap = txtTenDangNhap.getText().trim();
         String matKhau = new String(txtMatKhau.getPassword());
 
         if (tenDangNhap.isEmpty() || matKhau.isEmpty()) {
-            lblThongBao.setText("Vui long nhap day du thong tin");
+            lblThongBao.setText("Vui Lòng Nhập Đầy Đủ Thông Tin");
             return;
         }
 
         btnDangNhap.setEnabled(false);
         lblThongBao.setForeground(UITheme.TEXT_MUTED);
-        lblThongBao.setText("Dang kiem tra...");
+        lblThongBao.setText("Đang Kiểm Tra...");
 
         SwingWorker<TaiKhoan, Void> worker = new SwingWorker<>() {
             @Override
@@ -358,14 +390,16 @@ public class LoginFrame extends JFrame {
                     TaiKhoan tk = get();
                     if (tk == null) {
                         lblThongBao.setForeground(UITheme.DANGER);
-                        lblThongBao.setText("Sai ten dang nhap hoac mat khau");
+                        lblThongBao.setText("Sai Tên Đăng Nhập Hoặc Mật Khẩu");
                         return;
                     }
+                    nhatKyHeThongService.ghi(tk, "DANG_NHAP", tk.getVaiTro().toString(),
+                            "Đăng nhập thành công: " + tk.getTenDangNhap() + " (" + tk.getHoTen() + ")");
                     if (tk.isBatBuocDoiMatKhau()) {
-                        // Tai khoan dang bi bat co "bat buoc doi mat khau" (vi du: Admin
-                        // vua dat lai mat khau, hoac vua khoi phuc qua Google tu lan truoc
-                        // nhung chua doi xong) -> bat dialog doi mat khau truoc, chi mo
-                        // MainFrame SAU KHI doi xong.
+                        // Tài khoản đang bị bật cờ "bắt buộc đổi mật khẩu" (ví dụ: Admin
+                        // vừa đặt lại mật khẩu, hoặc vừa khôi phục qua Google từ lần trước
+                        // nhưng chưa đổi xong) -> bật dialog đổi mật khẩu trước, chỉ mở
+                        // MainFrame SAU KHI đổi xong.
                         vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog dialog =
                                 new vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog(
                                         LoginFrame.this, tk, true, () -> {
@@ -379,7 +413,7 @@ public class LoginFrame extends JFrame {
                     dispose();
                 } catch (Exception ex) {
                     lblThongBao.setForeground(UITheme.DANGER);
-                    lblThongBao.setText("Khong the ket noi CSDL. Kiem tra cau hinh.");
+                    lblThongBao.setText("Không Thể Kết Nối CSDL. Kiểm Tra Cấu Hình.");
                 }
             }
         };

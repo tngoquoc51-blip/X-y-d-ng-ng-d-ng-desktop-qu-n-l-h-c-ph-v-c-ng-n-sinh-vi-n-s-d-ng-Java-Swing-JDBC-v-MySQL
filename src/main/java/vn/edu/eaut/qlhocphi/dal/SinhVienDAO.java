@@ -49,18 +49,22 @@ public class SinhVienDAO {
     }
 
     public boolean them(SinhVien sv) throws SQLException {
-        String sql = "INSERT INTO SinhVien (MaSV,HoTen,Lop,Khoa,NgaySinh,Email,SoDienThoai,TrangThai,AnhDaiDien) VALUES (?,?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO SinhVien (MaSV,HoTen,Lop,Khoa,NgaySinh,Email,SoDienThoai,TrangThai,AnhDaiDien,SoDienThoaiPhuHuynh,QueQuan,DiaChi) " +
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             bind(ps, sv);
             ps.setBoolean(8, sv.isTrangThai());
             ps.setString(9, sv.getAnhDaiDien());
+            ps.setString(10, sv.getSoDienThoaiPhuHuynh());
+            ps.setString(11, sv.getQueQuan());
+            ps.setString(12, sv.getDiaChi());
             return ps.executeUpdate() > 0;
         }
     }
 
     public boolean capNhat(SinhVien sv) throws SQLException {
-        String sql = "UPDATE SinhVien SET HoTen=?,Lop=?,Khoa=?,NgaySinh=?,Email=?,SoDienThoai=?,TrangThai=?,AnhDaiDien=? WHERE MaSV=?";
+        String sql = "UPDATE SinhVien SET HoTen=?,Lop=?,Khoa=?,NgaySinh=?,Email=?,SoDienThoai=?,TrangThai=?,AnhDaiDien=?,SoDienThoaiPhuHuynh=?,QueQuan=?,DiaChi=? WHERE MaSV=?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, sv.getHoTen());
@@ -71,7 +75,10 @@ public class SinhVienDAO {
             ps.setString(6, sv.getSoDienThoai());
             ps.setBoolean(7, sv.isTrangThai());
             ps.setString(8, sv.getAnhDaiDien());
-            ps.setString(9, sv.getMaSV());
+            ps.setString(9, sv.getSoDienThoaiPhuHuynh());
+            ps.setString(10, sv.getQueQuan());
+            ps.setString(11, sv.getDiaChi());
+            ps.setString(12, sv.getMaSV());
             return ps.executeUpdate() > 0;
         }
     }
@@ -107,6 +114,9 @@ public class SinhVienDAO {
         sv.setSoDienThoai(rs.getString("SoDienThoai"));
         sv.setTrangThai(rs.getBoolean("TrangThai"));
         sv.setAnhDaiDien(rs.getString("AnhDaiDien"));
+        sv.setSoDienThoaiPhuHuynh(rs.getString("SoDienThoaiPhuHuynh"));
+        sv.setQueQuan(rs.getString("QueQuan"));
+        sv.setDiaChi(rs.getString("DiaChi"));
         return sv;
     }
 }

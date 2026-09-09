@@ -7,17 +7,22 @@ import vn.edu.eaut.qlhocphi.model.TaiKhoan;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Dialog "Quen mat khau" danh cho cong Sinh vien - luong 2 buoc:
+ * Dialog "Quen mat khau" danh cho cong Sinh vien - luong toi da 3 buoc:
  *  1. Nhap dung Gmail da duoc Admin lien ket voi tai khoan -> bam "Gui ma xac nhan".
  *     He thong gui 1 email chua ma 6 so toi dung Gmail do (qua OtpService + EmailUtils).
- *  2. Nhap ma 6 so vua nhan duoc trong hop thu -> bam "Xac nhan". Neu dung va con han,
- *     tai khoan duoc dat 1 mat khau tam ngau nhien + bat co "bat buoc doi mat khau",
- *     dialog nay dong lai va goi callback de man hinh dang nhap mo tiep dialog
- *     DoiMatKhauDialog(batBuoc=true) - dung mat khau moi tu do, chua the vao he
- *     thong duoc cho toi khi dat xong.
+ *  2. Nhap ma 6 so vua nhan duoc trong hop thu -> bam "Xac nhan".
+ *  3. NEU 1 Gmail nay dang duoc dung chung cho NHIEU tai khoan (vi du 1 nguoi vua co
+ *     tai khoan Sinh vien vua co tai khoan Ke toan, dung chung Gmail ca nhan), hien
+ *     them buoc chon DUNG tai khoan can khoi phuc mat khau. Neu chi khop 1 tai khoan
+ *     duy nhat thi bo qua buoc nay, tu dong tiep tuc luon.
+ *
+ * Sau khi xac dinh duoc dung 1 tai khoan, tai khoan do duoc dat 1 mat khau tam ngau
+ * nhien + bat co "bat buoc doi mat khau", dialog nay dong lai va goi callback de man
+ * hinh dang nhap mo tiep dialog DoiMatKhauDialog(batBuoc=true).
  */
 public class QuenMatKhauDialog extends JDialog {
     private final OtpService otpService = new OtpService();
@@ -35,11 +40,13 @@ public class QuenMatKhauDialog extends JDialog {
     private JLabel lblLoiB2;
     private JButton btnXacNhan;
 
+    private JPanel danhSachTaiKhoanBox;
+
     public QuenMatKhauDialog(Window chaMe, Consumer<TaiKhoan> khiThanhCong) {
         super(chaMe, "Quên mật khẩu", ModalityType.APPLICATION_MODAL);
         this.khiThanhCong = khiThanhCong;
-        setSize(460, 480);
-        setMinimumSize(new Dimension(420, 460));
+        setSize(460, 500);
+        setMinimumSize(new Dimension(420, 480));
         setLocationRelativeTo(chaMe);
         setResizable(false);
         getContentPane().setBackground(UITheme.BG_MAIN);
@@ -49,6 +56,7 @@ public class QuenMatKhauDialog extends JDialog {
         cardBox.setOpaque(false);
         cardBox.add(buildBuoc1(), "b1");
         cardBox.add(buildBuoc2(), "b2");
+        cardBox.add(buildBuoc3(), "b3");
         add(cardBox, BorderLayout.CENTER);
     }
 
@@ -112,7 +120,7 @@ public class QuenMatKhauDialog extends JDialog {
         wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
         wrap.setBorder(new EmptyBorder(24, 28, 22, 28));
 
-        JLabel moTa = new JLabel("<html>Nhập đúng Gmail đã được Admin liên kết với tài khoản sinh viên của bạn. Hệ thống sẽ gửi mã xác nhận 6 số tới Gmail này.</html>");
+        JLabel moTa = new JLabel("<html>Nhập đúng Gmail đã được Admin liên kết với tài khoản của bạn. Hệ thống sẽ gửi mã xác nhận 6 số tới Gmail này.</html>");
         moTa.setFont(UITheme.FONT_BASE);
         moTa.setForeground(UITheme.TEXT_MUTED);
         moTa.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -218,7 +226,7 @@ public class QuenMatKhauDialog extends JDialog {
         lblLoiB2.setAlignmentX(Component.LEFT_ALIGNMENT);
         lblLoiB2.setBorder(new EmptyBorder(8, 0, 10, 0));
 
-        btnXacNhan = UITheme.primaryButton("Xác nhận và đăng nhập");
+        btnXacNhan = UITheme.primaryButton("Xác nhận");
         btnXacNhan.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnXacNhan.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         btnXacNhan.addActionListener(e -> xacNhan());
@@ -251,6 +259,8 @@ public class QuenMatKhauDialog extends JDialog {
         return wrap;
     }
 
+    /** Xac minh ma OTP; neu dung, tra ve danh sach tai khoan khop Gmail nay - neu chi
+     *  co 1 tai khoan thi tu dong tiep tuc luon, neu nhieu hon 1 thi chuyen sang Buoc 3. */
     private void xacNhan() {
         String email = txtGmail.getText().trim();
         String ma = txtMa.getText().trim();
@@ -260,13 +270,14 @@ public class QuenMatKhauDialog extends JDialog {
         }
         btnXacNhan.setEnabled(false);
 
-        SwingWorker<TaiKhoan, Void> worker = new SwingWorker<>() {
+        SwingWorker<List<TaiKhoan>, Void> worker = new SwingWorker<>() {
             private String loi;
 
             @Override
-            protected TaiKhoan doInBackground() {
+            protected List<TaiKhoan> doInBackground() {
                 try {
-                    return otpService.xacNhanMaVaDatLaiMatKhau(email, ma);
+                    otpService.xacNhanMa(email, ma);
+                    return otpService.layTaiKhoanDangHoatDongTheoGoogleEmail(email);
                 } catch (Exception ex) {
                     loi = rootMessage(ex);
                     return null;
@@ -276,16 +287,24 @@ public class QuenMatKhauDialog extends JDialog {
             @Override
             protected void done() {
                 btnXacNhan.setEnabled(true);
-                TaiKhoan tk = get2();
-                if (tk == null) {
+                List<TaiKhoan> danhSach = get2();
+                if (danhSach == null) {
                     baoLoiB2(loi != null ? loi : "Xác nhận thất bại");
                     return;
                 }
-                dispose();
-                khiThanhCong.accept(tk);
+                if (danhSach.isEmpty()) {
+                    baoLoiB2("Không tìm thấy tài khoản đang hoạt động khớp Gmail này");
+                    return;
+                }
+                if (danhSach.size() == 1) {
+                    datLaiMatKhauVaHoanTat(danhSach.get(0));
+                } else {
+                    hienDanhSachChon(danhSach);
+                    cardLayout.show(cardBox, "b3");
+                }
             }
 
-            private TaiKhoan get2() {
+            private List<TaiKhoan> get2() {
                 try {
                     return get();
                 } catch (Exception ex) {
@@ -299,6 +318,101 @@ public class QuenMatKhauDialog extends JDialog {
     private void baoLoiB2(String text) {
         lblLoiB2.setForeground(UITheme.DANGER);
         lblLoiB2.setText("<html>" + text.replace("\n", "<br>") + "</html>");
+    }
+
+    // ================== Buoc 3: chon tai khoan (chi hien khi 1 Gmail khop > 1 tai khoan) ==================
+
+    private JPanel buildBuoc3() {
+        JPanel wrap = new JPanel();
+        wrap.setBackground(Color.WHITE);
+        wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
+        wrap.setBorder(new EmptyBorder(24, 28, 22, 28));
+
+        JLabel moTa = new JLabel("<html>Gmail này đang được dùng chung cho nhiều tài khoản. Chọn đúng tài khoản bạn muốn khôi phục mật khẩu:</html>");
+        moTa.setFont(UITheme.FONT_BASE);
+        moTa.setForeground(UITheme.TEXT_MUTED);
+        moTa.setAlignmentX(Component.LEFT_ALIGNMENT);
+        moTa.setBorder(new EmptyBorder(0, 0, 16, 0));
+
+        danhSachTaiKhoanBox = new JPanel();
+        danhSachTaiKhoanBox.setOpaque(false);
+        danhSachTaiKhoanBox.setLayout(new BoxLayout(danhSachTaiKhoanBox, BoxLayout.Y_AXIS));
+        danhSachTaiKhoanBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        wrap.add(moTa);
+        wrap.add(danhSachTaiKhoanBox);
+        wrap.add(Box.createVerticalGlue());
+        return wrap;
+    }
+
+    /** Ve 1 nut lon cho tung tai khoan trong danh sach - bam vao la chon luon tai khoan do. */
+    private void hienDanhSachChon(List<TaiKhoan> danhSach) {
+        danhSachTaiKhoanBox.removeAll();
+        for (TaiKhoan tk : danhSach) {
+            JButton btn = taoNutTaiKhoan(tk);
+            danhSachTaiKhoanBox.add(btn);
+            danhSachTaiKhoanBox.add(Box.createRigidArea(new Dimension(0, 10)));
+        }
+        danhSachTaiKhoanBox.revalidate();
+        danhSachTaiKhoanBox.repaint();
+    }
+
+    private JButton taoNutTaiKhoan(TaiKhoan tk) {
+        String nhanVaiTro = nhanTheoVaiTro(tk);
+        JButton btn = new JButton("<html><div style='padding:4px 0'>"
+                + "<b style='font-size:13px'>" + tk.getHoTen() + "</b><br>"
+                + "<span style='color:#6B7280;font-size:11px'>" + nhanVaiTro + " · " + tk.getTenDangNhap() + "</span>"
+                + "</div></html>");
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+        btn.setHorizontalAlignment(SwingConstants.LEFT);
+        btn.setBackground(Color.WHITE);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UITheme.BORDER, 1, true),
+                BorderFactory.createEmptyBorder(6, 14, 6, 14)));
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> datLaiMatKhauVaHoanTat(tk));
+        return btn;
+    }
+
+    private String nhanTheoVaiTro(TaiKhoan tk) {
+        if (tk.getVaiTro() == null) return "Tài khoản";
+        switch (tk.getVaiTro()) {
+            case ADMIN: return "Quản trị viên";
+            case KETOAN: return "Kế toán";
+            case SINHVIEN: return "Sinh viên";
+            default: return tk.getVaiTro().name();
+        }
+    }
+
+    /** Dat mat khau tam + bat co bat buoc doi cho DUNG 1 tai khoan da xac dinh, roi dong dialog. */
+    private void datLaiMatKhauVaHoanTat(TaiKhoan tk) {
+        SwingWorker<Void, Void> worker = new SwingWorker<>() {
+            private String loi;
+
+            @Override
+            protected Void doInBackground() {
+                try {
+                    otpService.datLaiMatKhauChoTaiKhoan(tk);
+                } catch (Exception ex) {
+                    loi = rootMessage(ex);
+                }
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                if (loi != null) {
+                    baoLoiB2(loi);
+                    cardLayout.show(cardBox, "b2");
+                    return;
+                }
+                dispose();
+                khiThanhCong.accept(tk);
+            }
+        };
+        worker.execute();
     }
 
     // ================== Dung chung ==================

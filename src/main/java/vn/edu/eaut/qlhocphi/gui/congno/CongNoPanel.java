@@ -1,8 +1,10 @@
 package vn.edu.eaut.qlhocphi.gui.congno;
 
 import vn.edu.eaut.qlhocphi.bus.CongNoService;
+import vn.edu.eaut.qlhocphi.bus.NhacNoTuDongService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
 import vn.edu.eaut.qlhocphi.dal.SinhVienDAO;
+import vn.edu.eaut.qlhocphi.gui.common.QuetQRDialog;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.model.HoaDonHocPhi;
 import vn.edu.eaut.qlhocphi.model.SinhVien;
@@ -27,15 +29,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-/**
- * Man hinh tra cuu cong no - ban "desktop quan ly" day du: banner, KPI, tim
- * kiem/loc trang thai, xem chi tiet (double-click), gui email nhac no ngay tai
- * cho, xuat Excel/PDF. Dong bo giao dien voi HoaDonPanel/HocKyPanel da lam.
- */
 public class CongNoPanel extends JPanel {
     private final CongNoService congNoService = new CongNoService();
     private final SinhVienDAO sinhVienDAO = new SinhVienDAO();
     private final java.util.function.BiConsumer<String, String> dieuHuongTimKiem;
+
+    private static final int CHU_KY_TU_DONG_CAP_NHAT_MS = 20_000;
+    private javax.swing.Timer timerTuDongCapNhat;
 
     private JTable table;
     private DefaultTableModel tableModel;
@@ -44,8 +44,12 @@ public class CongNoPanel extends JPanel {
     private JTextField txtTimKiem;
     private JComboBox<String> cboTrangThai;
     private JLabel lblSoLuong;
+    private JLabel lblTrangHienTai;
+    private JButton btnTrangTruoc, btnTrangSau;
+    private int trangHienTai = 0;
+    private static final int SO_DONG_MOI_TRANG = 20;
+    private List<HoaDonHocPhi> danhSachDaLoc = new ArrayList<>();
 
-    /** Danh sach hoa don con no day du dang tai gan nhat - dung cho chi tiet/nhac no theo dong. */
     private List<HoaDonHocPhi> danhSachHienTai = new ArrayList<>();
 
     public CongNoPanel(java.util.function.BiConsumer<String, String> dieuHuongTimKiem) {
@@ -66,9 +70,67 @@ public class CongNoPanel extends JPanel {
         add(buildTableCard(), BorderLayout.CENTER);
 
         taiDuLieu();
+        batDauTuDongCapNhat();
     }
 
-    // ================== HEADER (banner + logo) ==================
+    private void batDauTuDongCapNhat() {
+        timerTuDongCapNhat = new javax.swing.Timer(CHU_KY_TU_DONG_CAP_NHAT_MS, e -> {
+            if (isShowing()) {
+                taiDuLieu();
+            }
+        });
+        timerTuDongCapNhat.setRepeats(true);
+        timerTuDongCapNhat.start();
+
+        addHierarchyListener(e -> {
+            if (!isDisplayable() && timerTuDongCapNhat != null) {
+                timerTuDongCapNhat.stop();
+            }
+        });
+    }
+
+    /** Nut chuc nang to mau dam rieng biet - moi nut 1 mau, khong con dung
+     *  "secondaryButton" (vien trang nhat, de bi mo) nhu truoc. */
+    private JButton nutMauSac(String text, Color mauNen) {
+        JButton b = new JButton(text);
+        b.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        b.setBackground(mauNen);
+        b.setForeground(Color.WHITE);
+        b.setBorder(BorderFactory.createEmptyBorder(9, 16, 9, 16));
+        b.setFocusPainted(false);
+        b.setOpaque(true);
+        b.setBorderPainted(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return b;
+    }
+
+    /** Nut "nguy hiem" (hanh dong hang loat/canh bao) tu ve bang Graphics2D thay
+     *  vi dua vao setBackground() cua JButton thuong - tranh bi LookAndFeel he
+     *  thong (Windows) de them lop gradient bong len tren lam mau bi "loa" sang,
+     *  giam do tuong phan voi chu trang, kho doc. */
+    private JButton nutNguyHiemToVe(String text) {
+        JButton b = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color mau = getModel().isRollover() ? UITheme.DANGER.darker() : UITheme.DANGER;
+                g2.setColor(mau);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        b.setFont(UITheme.FONT_BOLD);
+        b.setForeground(Color.WHITE);
+        b.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
+        b.setContentAreaFilled(false);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setOpaque(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return b;
+    }
 
     private JPanel buildHeader() {
         JPanel banner = UITheme.gradientBanner();
@@ -83,10 +145,10 @@ public class CongNoPanel extends JPanel {
         JPanel chuText = new JPanel();
         chuText.setOpaque(false);
         chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
-        JLabel tieuDe = new JLabel("Cong no hoc phi");
+        JLabel tieuDe = new JLabel("Công nợ học phí");
         tieuDe.setFont(UITheme.FONT_TITLE);
         tieuDe.setForeground(Color.WHITE);
-        JLabel phu = new JLabel("Tra cuu, canh bao va nhac no sinh vien con no hoc phi");
+        JLabel phu = new JLabel("Tra cứu, cảnh báo và nhắc nợ sinh viên còn nợ học phí");
         phu.setFont(UITheme.FONT_BASE);
         phu.setForeground(new Color(255, 255, 255, 210));
         chuText.add(tieuDe);
@@ -95,7 +157,7 @@ public class CongNoPanel extends JPanel {
         trai.add(chuText, BorderLayout.CENTER);
         banner.add(trai, BorderLayout.WEST);
 
-        JButton btnLamMoi = new JButton("Lam moi");
+        JButton btnLamMoi = new JButton("Làm mới");
         btnLamMoi.setFont(UITheme.FONT_BOLD);
         btnLamMoi.setBackground(Color.WHITE);
         btnLamMoi.setForeground(UITheme.PRIMARY_DARK);
@@ -135,19 +197,17 @@ public class CongNoPanel extends JPanel {
         return badge;
     }
 
-    // ================== KPI ==================
-
     private JPanel buildThongKeCards() {
         JPanel row = new JPanel(new GridLayout(1, 3, 16, 0));
         row.setOpaque(false);
 
         lblSoHoaDonNo = new JLabel("0");
-        lblTongNo = new JLabel("0 d");
-        lblTongThu = new JLabel("0 d");
+        lblTongNo = new JLabel("0 đ");
+        lblTongThu = new JLabel("0 đ");
 
-        row.add(thongKeCard("So hoa don con no", lblSoHoaDonNo, UITheme.WARNING));
-        row.add(thongKeCard("Tong cong no toan truong", lblTongNo, UITheme.DANGER));
-        row.add(thongKeCard("Tong da thu", lblTongThu, UITheme.SUCCESS));
+        row.add(thongKeCard("Số hóa đơn còn nợ", lblSoHoaDonNo, UITheme.WARNING));
+        row.add(thongKeCard("Tổng công nợ toàn trường", lblTongNo, UITheme.DANGER));
+        row.add(thongKeCard("Tổng đã thu", lblTongThu, UITheme.SUCCESS));
         return row;
     }
 
@@ -170,8 +230,6 @@ public class CongNoPanel extends JPanel {
         return card;
     }
 
-    // ================== TOOLBAR: TIM KIEM + LOC + XUAT + NHAC NO (GridBagLayout, khong wrap) ==================
-
     private JPanel buildToolbar() {
         JPanel toolbar = new JPanel(new GridBagLayout());
         toolbar.setOpaque(false);
@@ -183,7 +241,7 @@ public class CongNoPanel extends JPanel {
         int col = 0;
 
         gbc.gridx = col++;
-        toolbar.add(UIUtils.formLabel("Tim kiem:"), gbc);
+        toolbar.add(UIUtils.formLabel("Tìm kiếm:"), gbc);
 
         txtTimKiem = UIUtils.textField(15);
         txtTimKiem.getDocument().addDocumentListener(new DocumentListener() {
@@ -194,10 +252,16 @@ public class CongNoPanel extends JPanel {
         gbc.gridx = col++;
         toolbar.add(txtTimKiem, gbc);
 
+        JButton btnQuetQR = UITheme.accentButton("Quét QR thẻ SV");
+        btnQuetQR.setToolTipText("Quét mã QR trên thẻ sinh viên bằng camera để tra cứu công nợ tức thì, khỏi gõ tay mã SV");
+        btnQuetQR.addActionListener(e -> quetQRTimKiem());
         gbc.gridx = col++;
-        toolbar.add(UIUtils.formLabel("Trang thai:"), gbc);
+        toolbar.add(btnQuetQR, gbc);
 
-        cboTrangThai = new JComboBox<>(new String[]{"Tat ca trang thai", "Dong mot phan", "Qua han"});
+        gbc.gridx = col++;
+        toolbar.add(UIUtils.formLabel("Trạng thái:"), gbc);
+
+        cboTrangThai = new JComboBox<>(new String[]{"Tất cả trạng thái", "Đóng một phần", "Quá hạn"});
         cboTrangThai.setFont(UITheme.FONT_BASE);
         cboTrangThai.addActionListener(e -> apDungBoLoc());
         gbc.gridx = col++;
@@ -210,17 +274,33 @@ public class CongNoPanel extends JPanel {
         gbc.weightx = 0;
         gbc.fill = GridBagConstraints.NONE;
 
-        JButton btnNhacNo = UITheme.secondaryButton("Gui nhac no");
+        JButton btnNhacNo = nutMauSac("Gửi nhắc nợ", UITheme.SUCCESS);
         btnNhacNo.addActionListener(e -> guiNhacNoDaChon());
         gbc.gridx = col++;
         toolbar.add(btnNhacNo, gbc);
 
-        JButton btnXuatExcel = UITheme.secondaryButton("Xuat Excel");
+        JButton btnNhacNoHangLoat = nutNguyHiemToVe("Gửi nhắc nợ TẤT CẢ quá hạn");
+        btnNhacNoHangLoat.addActionListener(e -> guiNhacNoHangLoat());
+        gbc.gridx = col++;
+        toolbar.add(btnNhacNoHangLoat, gbc);
+
+        JButton btnCauHinh = nutMauSac("Cấu hình khung thu", UITheme.SIDEBAR_PURPLE);
+        btnCauHinh.addActionListener(e -> new CauHinhNhacNoDialog(
+                (Window) SwingUtilities.getWindowAncestor(this), null, this::taiDuLieu).setVisible(true));
+        gbc.gridx = col++;
+        toolbar.add(btnCauHinh, gbc);
+
+        JButton btnQuetTuDong = nutMauSac("Quét nhắc nợ tự động ngay", UITheme.PRIMARY);
+        btnQuetTuDong.addActionListener(e -> quetNhacNoTuDongNgay());
+        gbc.gridx = col++;
+        toolbar.add(btnQuetTuDong, gbc);
+
+        JButton btnXuatExcel = nutMauSac("Xuất Excel", UITheme.SIDEBAR_BLUE);
         btnXuatExcel.addActionListener(e -> xuatExcel());
         gbc.gridx = col++;
         toolbar.add(btnXuatExcel, gbc);
 
-        JButton btnXuatPDF = UITheme.secondaryButton("Xuat PDF");
+        JButton btnXuatPDF = nutMauSac("Xuất PDF", UITheme.PRIMARY_DARK);
         btnXuatPDF.addActionListener(e -> xuatPDF());
         gbc.gridx = col++;
         gbc.insets = new Insets(0, 0, 0, 0);
@@ -229,15 +309,13 @@ public class CongNoPanel extends JPanel {
         return toolbar;
     }
 
-    // ================== BANG DU LIEU ==================
-
     private JPanel buildTableCard() {
         JPanel card = UITheme.card();
         card.setLayout(new BorderLayout(0, 10));
-        card.add(UITheme.sectionLabel("Danh sach sinh vien con no"), BorderLayout.NORTH);
+        card.add(UITheme.sectionLabel("Danh sách sinh viên còn nợ"), BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(new Object[]{
-                "Ma HD", "Ma SV", "Ho ten", "Hoc ky", "Con no", "Trang thai"
+                "Mã HD", "Mã SV", "Họ tên", "Học kỳ", "Còn nợ", "Trạng thái"
         }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -245,8 +323,8 @@ public class CongNoPanel extends JPanel {
         table = new JTable(tableModel);
         UIUtils.styleTable(table);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setToolTipText("Nhap doi (double-click) 1 dong de xem chi tiet cong no");
-        table.putClientProperty("phimTat", "doubleclick=chi tiet, alt+click=xem sinh vien");
+        table.setToolTipText("Nhấp đúp (double-click) 1 dòng để xem chi tiết công nợ");
+        table.putClientProperty("phimTat", "doubleclick=chi tiết, alt+click=xem sinh viên");
 
         sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
@@ -280,15 +358,31 @@ public class CongNoPanel extends JPanel {
         scroll.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         card.add(scroll, BorderLayout.CENTER);
 
-        lblSoLuong = new JLabel("Hien thi 0 / 0 hoa don");
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setOpaque(false);
+
+        lblSoLuong = new JLabel("Hiển thị 0 / 0 hóa đơn");
         lblSoLuong.setFont(UITheme.FONT_BASE);
         lblSoLuong.setForeground(UITheme.TEXT_MUTED);
-        card.add(lblSoLuong, BorderLayout.SOUTH);
+        footer.add(lblSoLuong, BorderLayout.WEST);
 
+        JPanel phanTrang = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        phanTrang.setOpaque(false);
+        btnTrangTruoc = UITheme.secondaryButton("< Trang trước");
+        lblTrangHienTai = new JLabel("Trang 1 / 1");
+        lblTrangHienTai.setFont(UITheme.FONT_BOLD);
+        btnTrangSau = UITheme.secondaryButton("Trang sau >");
+        btnTrangTruoc.addActionListener(e -> { if (trangHienTai > 0) { trangHienTai--; hienThiTrangHienTai(); } });
+        btnTrangSau.addActionListener(e -> { trangHienTai++; hienThiTrangHienTai(); });
+        phanTrang.add(btnTrangTruoc);
+        phanTrang.add(lblTrangHienTai);
+        phanTrang.add(btnTrangSau);
+        footer.add(phanTrang, BorderLayout.EAST);
+
+        card.add(footer, BorderLayout.SOUTH);
         return card;
     }
 
-    /** Renderer trang thai dang "the mau" (pill), dong bo voi HoaDonPanel. */
     private class TrangThaiCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
@@ -316,8 +410,6 @@ public class CongNoPanel extends JPanel {
         }
     }
 
-    // ================== TIM KIEM / LOC ==================
-
     private void apDungBoLoc() {
         List<RowFilter<Object, Object>> danhSachLoc = new ArrayList<>();
 
@@ -326,25 +418,55 @@ public class CongNoPanel extends JPanel {
             danhSachLoc.add(RowFilter.regexFilter("(?i)" + Pattern.quote(tuKhoa), 1, 2));
         }
         String trangThai = (String) cboTrangThai.getSelectedItem();
-        if (trangThai != null && !trangThai.equals("Tat ca trang thai")) {
+        if (trangThai != null && !trangThai.equals("Tất cả trạng thái")) {
             danhSachLoc.add(RowFilter.regexFilter("^" + Pattern.quote(trangThai) + "$", 5));
         }
 
         sorter.setRowFilter(danhSachLoc.isEmpty() ? null : RowFilter.andFilter(danhSachLoc));
+        trangHienTai = 0;
+        hienThiTrangHienTai();
+    }
+
+    private void hienThiTrangHienTai() {
+        int tongSoDongDaLoc = table.getRowCount();
+        int tongSoTrang = Math.max(1, (int) Math.ceil(tongSoDongDaLoc / (double) SO_DONG_MOI_TRANG));
+        trangHienTai = Math.max(0, Math.min(trangHienTai, tongSoTrang - 1));
+
+        int batDau = trangHienTai * SO_DONG_MOI_TRANG;
+        int ketThuc = Math.min(batDau + SO_DONG_MOI_TRANG, tongSoDongDaLoc);
+
+        RowFilter<Object, Object> locTrang = new RowFilter<>() {
+            @Override
+            public boolean include(Entry<?, ?> entry) {
+                return true;
+            }
+        };
+
+        lblTrangHienTai.setText("Trang " + (trangHienTai + 1) + " / " + tongSoTrang);
+        btnTrangTruoc.setEnabled(trangHienTai > 0);
+        btnTrangSau.setEnabled(trangHienTai < tongSoTrang - 1);
         capNhatSoLuongHienThi();
     }
 
     private void capNhatSoLuongHienThi() {
-        lblSoLuong.setText("Hien thi " + table.getRowCount() + " / " + tableModel.getRowCount() + " hoa don");
+        lblSoLuong.setText("Hiển thị " + table.getRowCount() + " / " + tableModel.getRowCount() + " hóa đơn");
     }
 
-
-    /** Cho phep man hinh khac (VD: Thong ke) kich hoat tim kiem tu ben ngoai. */
     public void timKiem(String tuKhoa) {
         txtTimKiem.setText(tuKhoa);
     }
 
-    // ================== TAI DU LIEU ==================
+    /** MỚI: mở camera quét mã QR trên thẻ sinh viên, tự động điền vào ô tìm kiếm
+     *  ngay khi quét được - kế toán khỏi phải gõ tay mã SV. */
+    private void quetQRTimKiem() {
+        Window chaMe = SwingUtilities.getWindowAncestor(this);
+        QuetQRDialog dlg = new QuetQRDialog(chaMe, "Quét thẻ sinh viên - tra cứu công nợ");
+        dlg.setVisible(true);
+        String maSV = dlg.layKetQua();
+        if (maSV != null && !maSV.isBlank()) {
+            timKiem(maSV.trim());
+        }
+    }
 
     private void taiDuLieu() {
         SwingWorker<Object[], Void> worker = new SwingWorker<>() {
@@ -379,7 +501,7 @@ public class CongNoPanel extends JPanel {
 
                     apDungBoLoc();
                 } catch (Exception ex) {
-                    UIUtils.thongBaoLoi(CongNoPanel.this, "Khong the tai du lieu cong no.");
+                    UIUtils.thongBaoLoi(CongNoPanel.this, "Không thể tải dữ liệu công nợ.");
                 }
             }
         };
@@ -396,8 +518,6 @@ public class CongNoPanel extends JPanel {
                 .findFirst().orElse(null);
     }
 
-    // ================== XEM CHI TIET (double-click) ==================
-
     private void xemChiTietDongDangChon() {
         HoaDonHocPhi hd = layHoaDonDangChon();
         if (hd == null) return;
@@ -406,21 +526,21 @@ public class CongNoPanel extends JPanel {
         noiDung.setLayout(new BoxLayout(noiDung, BoxLayout.Y_AXIS));
         noiDung.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
-        dongChiTiet(noiDung, "Ma hoa don", "#" + hd.getMaHoaDon());
-        dongChiTiet(noiDung, "Sinh vien", hd.getTenSV() + " (" + hd.getMaSV() + ")");
-        dongChiTiet(noiDung, "Hoc ky", hd.getTenHocKy());
+        dongChiTiet(noiDung, "Mã hóa đơn", "#" + hd.getMaHoaDon());
+        dongChiTiet(noiDung, "Sinh viên", hd.getTenSV() + " (" + hd.getMaSV() + ")");
+        dongChiTiet(noiDung, "Học kỳ", hd.getTenHocKy());
         noiDung.add(Box.createRigidArea(new Dimension(0, 8)));
-        dongChiTiet(noiDung, "Tong hoc phi", MoneyUtils.format(hd.getSoTien()));
-        dongChiTiet(noiDung, "Da nop", MoneyUtils.format(hd.getDaNop()));
-        dongChiTiet(noiDung, "Con no", MoneyUtils.format(hd.tinhConNo()));
-        dongChiTiet(noiDung, "Trang thai", hd.tinhTrangThai().getNhan());
+        dongChiTiet(noiDung, "Tổng học phí", MoneyUtils.format(hd.getSoTien()));
+        dongChiTiet(noiDung, "Đã nộp", MoneyUtils.format(hd.getDaNop()));
+        dongChiTiet(noiDung, "Còn nợ", MoneyUtils.format(hd.tinhConNo()));
+        dongChiTiet(noiDung, "Trạng thái", hd.tinhTrangThai().getNhan());
 
-        JButton btnXemSV = UITheme.primaryButton("Xem ho so sinh vien");
+        JButton btnXemSV = UITheme.primaryButton("Xem hồ sơ sinh viên");
         btnXemSV.setAlignmentX(Component.LEFT_ALIGNMENT);
         noiDung.add(Box.createRigidArea(new Dimension(0, 10)));
         noiDung.add(btnXemSV);
 
-        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Chi tiet cong no - Hoa don #" + hd.getMaHoaDon());
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Chi tiết công nợ - Hóa đơn #" + hd.getMaHoaDon());
         dialog.setModal(true);
         dialog.getContentPane().add(noiDung);
         dialog.pack();
@@ -449,12 +569,10 @@ public class CongNoPanel extends JPanel {
         container.add(dong);
     }
 
-    // ================== GUI NHAC NO QUA EMAIL ==================
-
     private void guiNhacNoDaChon() {
         HoaDonHocPhi hd = layHoaDonDangChon();
         if (hd == null) {
-            UIUtils.thongBaoLoi(this, "Vui long chon 1 dong trong bang de gui nhac no.");
+            UIUtils.thongBaoLoi(this, "Vui lòng chọn 1 dòng trong bảng để gửi nhắc nợ.");
             return;
         }
 
@@ -463,7 +581,7 @@ public class CongNoPanel extends JPanel {
             protected Boolean doInBackground() throws Exception {
                 SinhVien sv = sinhVienDAO.timTheoMa(hd.getMaSV());
                 if (sv == null || sv.getEmail() == null || sv.getEmail().isBlank()) {
-                    throw new IllegalStateException("Sinh vien chua co email trong he thong.");
+                    throw new IllegalStateException("Sinh viên chưa có email trong hệ thống.");
                 }
                 return EmailUtils.guiNhacHocPhi(sv.getEmail(), hd.getTenSV(), hd.getTenHocKy(),
                         MoneyUtils.format(hd.tinhConNo()));
@@ -474,10 +592,10 @@ public class CongNoPanel extends JPanel {
                 try {
                     boolean thanhCong = get();
                     if (thanhCong) {
-                        UIUtils.thongBao(CongNoPanel.this, "Da gui email nhac no cho sinh vien " + hd.getTenSV());
+                        UIUtils.thongBao(CongNoPanel.this, "Đã gửi email nhắc nợ cho sinh viên " + hd.getTenSV());
                     } else {
                         UIUtils.thongBaoLoi(CongNoPanel.this,
-                                "Gui email that bai. Kiem tra lai cau hinh mail trong application.properties.");
+                                "Gửi email thất bại. Kiểm tra lại cấu hình mail trong application.properties.");
                     }
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
@@ -488,10 +606,100 @@ public class CongNoPanel extends JPanel {
         worker.execute();
     }
 
-    // ================== XUAT EXCEL / PDF ==================
+    private void guiNhacNoHangLoat() {
+        List<HoaDonHocPhi> quaHan = danhSachHienTai.stream()
+                .filter(hd -> hd.tinhTrangThai() == TrangThaiHoaDon.QUA_HAN)
+                .toList();
+
+        if (quaHan.isEmpty()) {
+            UIUtils.thongBao(this, "Hiện không có hóa đơn nào quá hạn.");
+            return;
+        }
+
+        int xacNhan = JOptionPane.showConfirmDialog(this,
+                "Gửi email nhắc nợ cho " + quaHan.size() + " hóa đơn đang quá hạn?",
+                "Xác nhận gửi hàng loạt", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (xacNhan != JOptionPane.YES_OPTION) return;
+
+        SwingWorker<int[], Void> worker = new SwingWorker<>() {
+            @Override
+            protected int[] doInBackground() {
+                int thanhCong = 0, thatBai = 0;
+                for (HoaDonHocPhi hd : quaHan) {
+                    try {
+                        SinhVien sv = sinhVienDAO.timTheoMa(hd.getMaSV());
+                        if (sv == null || sv.getEmail() == null || sv.getEmail().isBlank()) {
+                            thatBai++;
+                            continue;
+                        }
+                        boolean ok = EmailUtils.guiNhacHocPhi(sv.getEmail(), hd.getTenSV(), hd.getTenHocKy(),
+                                MoneyUtils.format(hd.tinhConNo()));
+                        if (ok) thanhCong++; else thatBai++;
+                    } catch (Exception ex) {
+                        thatBai++;
+                    }
+                }
+                return new int[]{thanhCong, thatBai};
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    int[] ketQua = get();
+                    UIUtils.thongBao(CongNoPanel.this, "Đã gửi thành công " + ketQua[0]
+                            + " email. Thất bại/không có email: " + ketQua[1] + ".");
+                } catch (Exception ex) {
+                    UIUtils.thongBaoLoi(CongNoPanel.this, "Có lỗi khi gửi hàng loạt.");
+                }
+            }
+        };
+        worker.execute();
+    }
+
+    private void quetNhacNoTuDongNgay() {
+        int xacNhan = JOptionPane.showConfirmDialog(this,
+                "Hệ thống sẽ quét TOÀN BỘ hóa đơn quá hạn theo Khung thời gian thu học phí\n"
+                        + "đang được bật, và tự động gửi:\n"
+                        + "- Email cho sinh viên (nếu chưa từng gửi)\n"
+                        + "- SMS cho phụ huynh (nếu đã gửi email ≥ 1 phút mà vẫn chưa đóng)\n\n"
+                        + "Tiếp tục?",
+                "Xác nhận", JOptionPane.YES_NO_OPTION);
+        if (xacNhan != JOptionPane.YES_OPTION) return;
+
+        SwingWorker<NhacNoTuDongService.KetQuaNhacNo, Void> worker = new SwingWorker<>() {
+            @Override
+            protected NhacNoTuDongService.KetQuaNhacNo doInBackground() throws Exception {
+                return new NhacNoTuDongService().quetVaGuiNhacNo();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    NhacNoTuDongService.KetQuaNhacNo kq = get();
+                    if (!kq.coCauHinhDangApDung) {
+                        UIUtils.thongBaoLoi(CongNoPanel.this,
+                                "Chưa có Khung thời gian thu học phí nào đang được bật.\n"
+                                        + "Bấm 'Cấu hình khung thu' để đặt trước.");
+                        return;
+                    }
+                    UIUtils.thongBao(CongNoPanel.this,
+                            "Đã quét " + kq.tongQuaHan + " hóa đơn còn nợ:\n"
+                                    + "- Đã gửi email SV: " + kq.daGuiEmailSV + "\n"
+                                    + "- Đã gửi SMS phụ huynh: " + kq.daGuiSmsPH + "\n"
+                                    + "- Chưa đến lượt gửi: " + kq.boQuaChuaDenGio + "\n"
+                                    + "- Bỏ qua (thiếu thông tin liên hệ): " + kq.boQuaThieuLienHe);
+                    taiDuLieu();
+                } catch (Exception ex) {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    UIUtils.thongBaoLoi(CongNoPanel.this, "Lỗi: " + cause.getMessage());
+                }
+            }
+        };
+        worker.execute();
+    }
 
     private String[] tieuDeCotXuat() {
-        return new String[]{"Ma HD", "Ma SV", "Ho ten", "Hoc ky", "Con no", "Trang thai"};
+        return new String[]{"Mã HD", "Mã SV", "Họ tên", "Học kỳ", "Còn nợ", "Trạng thái"};
     }
 
     private List<String[]> layDuLieuDangHienThi() {
@@ -509,7 +717,7 @@ public class CongNoPanel extends JPanel {
 
     private void xuatExcel() {
         if (table.getRowCount() == 0) {
-            UIUtils.thongBaoLoi(this, "Khong co du lieu de xuat.");
+            UIUtils.thongBaoLoi(this, "Không có dữ liệu để xuất.");
             return;
         }
         JFileChooser chooser = new JFileChooser();
@@ -530,10 +738,10 @@ public class CongNoPanel extends JPanel {
             protected void done() {
                 try {
                     get();
-                    UIUtils.thongBao(CongNoPanel.this, "Da xuat file Excel:\n" + duongDan);
+                    UIUtils.thongBao(CongNoPanel.this, "Đã xuất file Excel:\n" + duongDan);
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    UIUtils.thongBaoLoi(CongNoPanel.this, "Xuat Excel that bai: " + cause.getMessage());
+                    UIUtils.thongBaoLoi(CongNoPanel.this, "Xuất Excel thất bại: " + cause.getMessage());
                 }
             }
         };
@@ -542,7 +750,7 @@ public class CongNoPanel extends JPanel {
 
     private void xuatPDF() {
         if (table.getRowCount() == 0) {
-            UIUtils.thongBaoLoi(this, "Khong co du lieu de xuat.");
+            UIUtils.thongBaoLoi(this, "Không có dữ liệu để xuất.");
             return;
         }
         JFileChooser chooser = new JFileChooser();
@@ -555,7 +763,7 @@ public class CongNoPanel extends JPanel {
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
-                PDFExporter.exportBangDuLieu(duongDan, "DANH SACH CONG NO HOC PHI", tieuDeCotXuat(), layDuLieuDangHienThi());
+                PDFExporter.exportBangDuLieu(duongDan, "DANH SÁCH CÔNG NỢ HỌC PHÍ", tieuDeCotXuat(), layDuLieuDangHienThi());
                 return null;
             }
 
@@ -563,10 +771,10 @@ public class CongNoPanel extends JPanel {
             protected void done() {
                 try {
                     get();
-                    UIUtils.thongBao(CongNoPanel.this, "Da xuat file PDF:\n" + duongDan);
+                    UIUtils.thongBao(CongNoPanel.this, "Đã xuất file PDF:\n" + duongDan);
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    UIUtils.thongBaoLoi(CongNoPanel.this, "Xuat PDF that bai: " + cause.getMessage());
+                    UIUtils.thongBaoLoi(CongNoPanel.this, "Xuất PDF thất bại: " + cause.getMessage());
                 }
             }
         };

@@ -1,76 +1,124 @@
 package vn.edu.eaut.qlhocphi.ai;
 
-import vn.edu.eaut.qlhocphi.config.AppConfig;
 import vn.edu.eaut.qlhocphi.dal.HoaDonDAO;
+import vn.edu.eaut.qlhocphi.dal.SinhVienDAO;
 import vn.edu.eaut.qlhocphi.model.HoaDonHocPhi;
+import vn.edu.eaut.qlhocphi.model.SinhVien;
 
+import java.io.File;
 import java.math.BigDecimal;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.sql.SQLException;
-import java.time.Duration;
+import java.text.Normalizer;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Dich vu Chatbot ho tro tra loi cau hoi ve hoc phi/cong no.
+ * Dich vu Chatbot - tra loi tu do moi chu de qua AI that (Google Gemini), dong thoi
+ * UU TIEN tra loi CHINH XAC 100% cho 2 loai cau hoi tra cuu du lieu that: (1) cong no
+ * theo ma SV, (2) thong tin/anh dai dien sinh vien.
  *
- * Hoat dong theo 2 tang:
- * 1) RULE-BASED (luon chay, khong can API key): nhan dien mau cau hoi thuong gap
- *    (vi du "cong no cua SV001") va tra loi truc tiep tu du lieu that trong CSDL.
- * 2) AI THAT (tuy chon): neu cau hinh ai.api.key trong application.properties,
- *    cau hoi ngoai pham vi rule-based se duoc chuyen tiep toi API AI (vi du Anthropic)
- *    de tra loi tu nhien hon.
+ * SUA LOI QUAN TRONG: ban truoc so khop tu khoa KHONG DAU (VD "thong tin") voi cau hoi
+ * nguoi dung go CO DAU that ("Thông tin sinh viên SV001") - 2 chuoi nay khong bao gio
+ * bang nhau trong Java, khien moi cau hoi co dau deu bi roi xuong nhanh "chuyen cho AI"
+ * thay vi tra CSDL. Ban nay BO DAU CA 2 VE truoc khi so sanh, sua dut diem loi tren.
  *
- * Luu y: goi mang o day nen duoc thuc hien trong SwingWorker o tang GUI de khong treo giao dien.
+ * GIOI HAN CAN BIET: moi lan goi traLoiChiTiet(...) la 1 lan hoi DOC LAP, khong mang
+ * theo lich su hoi thoai truoc do - nguoi dung can neu ro Ma SV/ten trong CHINH cau hoi.
  */
 public class ChatbotService {
 
     private final HoaDonDAO hoaDonDAO = new HoaDonDAO();
-    private static final Pattern PATTERN_MA_SV = Pattern.compile("SV\\d{3,}", Pattern.CASE_INSENSITIVE);
+    private final SinhVienDAO sinhVienDAO = new SinhVienDAO();
 
-    public String traLoi(String cauHoi) {
-        String cauHoiLower = cauHoi.toLowerCase().trim();
+    private static final Pattern PATTERN_MA_SV_CHU = Pattern.compile("SV\\d{3,}", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PATTERN_MA_SV_SO = Pattern.compile("\\b\\d{6,}\\b");
+
+    private static final String SYSTEM_PROMPT =
+            "Ban la tro ly ao than thien, ten la \"Tro ly QL Hoc phi\", tro chuyen tu nhien nhu nguoi that. "
+                    + "Ban dang hoat dong ben trong 1 ung dung desktop quan ly hoc phi va cong no sinh vien cua "
+                    + "truong dai hoc. Ban co the tra loi MOI chu de nguoi dung hoi (kien thuc chung, tro chuyen "
+                    + "phiem, tu van, giai thich...), khong chi gioi han trong chu de hoc phi. Tra loi ngan gon, "
+                    + "de hieu, tu nhien bang tieng Viet (tru khi nguoi dung hoi bang ngon ngu khac). Neu nguoi "
+                    + "dung hoi thong tin ca nhan sinh vien (ten, lop, khoa, hinh anh...), hay tra loi rang ban "
+                    + "khong the tu tra cuu duoc va de nghi ho hoi lai kem ro Ma sinh vien.";
+
+    public KetQuaTraLoi traLoiChiTiet(String cauHoi) {
+        String cauHoiKhongDau = boDauTiengViet(cauHoi);
 
         try {
-            // ----- Kich ban 1: hoi cong no theo ma SV -----
-            Matcher m = PATTERN_MA_SV.matcher(cauHoi.toUpperCase());
-            if (m.find() && (cauHoiLower.contains("cong no") || cauHoiLower.contains("hoc phi") || cauHoiLower.contains("con no"))) {
-                return traLoiCongNo(m.group());
+            String maSV = timMaSVTrongCauHoi(cauHoi);
+
+            // Uu tien 1: hoi cong no -> tra loi CHINH XAC tu CSDL.
+            if (maSV != null && (cauHoiKhongDau.contains("cong no") || cauHoiKhongDau.contains("hoc phi")
+                    || cauHoiKhongDau.contains("con no"))) {
+                return new KetQuaTraLoi(traLoiCongNo(maSV), null);
             }
 
-            // ----- Kich ban 2: chao hoi -----
-            if (cauHoiLower.contains("xin chao") || cauHoiLower.equals("hi") || cauHoiLower.equals("hello")) {
-                return "Xin chao! Toi la tro ly ao cua he thong quan ly hoc phi. "
-                        + "Ban co the hoi toi ve cong no, hoc phi, hoac cach thanh toan. "
-                        + "Vi du: \"Cong no cua SV001 con bao nhieu?\"";
+            // Uu tien 2: hoi thong tin ca nhan/anh dai dien -> tra loi CHINH XAC tu CSDL + anh that (neu co).
+            if (maSV != null && (cauHoiKhongDau.contains("thong tin") || cauHoiKhongDau.contains("hinh anh")
+                    || cauHoiKhongDau.contains(" anh ") || cauHoiKhongDau.contains("anh cua")
+                    || cauHoiKhongDau.contains("lop nao") || cauHoiKhongDau.contains("khoa nao")
+                    || cauHoiKhongDau.contains("hoc lop") || cauHoiKhongDau.contains("sinh vien"))) {
+                return traLoiThongTinSinhVien(maSV);
             }
 
-            // ----- Kich ban 3: huong dan thanh toan -----
-            if (cauHoiLower.contains("thanh toan") && !m.find()) {
-                return "Ban co the thanh toan hoc phi bang 3 cach: (1) Nop tien mat truc tiep tai phong ke toan, "
-                        + "(2) Chuyen khoan ngan hang theo thong tin tren hoa don, "
-                        + "(3) Thanh toan online ngay trong ung dung qua muc \"Thanh toan online\".";
+            // Moi cau hoi con lai: chuyen het cho AI.
+            if (ChatbotClient.daCauHinh()) {
+                return new KetQuaTraLoi(ChatbotClient.goi(SYSTEM_PROMPT, cauHoi), null);
             }
 
-            // ----- Ngoai pham vi rule-based: goi AI that neu co cau hinh -----
-            String apiKey = AppConfig.get("ai.api.key");
-            if (apiKey != null && !apiKey.isBlank()) {
-                return goiAIThat(cauHoi);
+            if (cauHoiKhongDau.contains("xin chao") || cauHoiKhongDau.equals("hi") || cauHoiKhongDau.equals("hello")) {
+                return new KetQuaTraLoi("Xin chao! Toi la tro ly ao cua he thong quan ly hoc phi. "
+                        + "Ban co the hoi toi ve cong no, thong tin sinh vien, hoac cach thanh toan. "
+                        + "Vi du: \"Cong no cua SV001 con bao nhieu?\" hoac \"Thong tin sinh vien 20231475\".", null);
             }
-
-            return "Toi chua chac chan cau tra loi cho cau hoi nay. "
-                    + "Ban thu hoi cu the hon, vi du kem ma sinh vien (VD: \"Cong no cua SV001\"), "
-                    + "hoac lien he phong ke toan de duoc ho tro them.";
+            if (cauHoiKhongDau.contains("thanh toan")) {
+                return new KetQuaTraLoi("Ban co the thanh toan hoc phi bang 3 cach: (1) Nop tien mat truc tiep "
+                        + "tai phong ke toan, (2) Chuyen khoan ngan hang theo thong tin tren hoa don, "
+                        + "(3) Thanh toan online ngay trong ung dung qua muc \"Thanh toan online\".", null);
+            }
+            return new KetQuaTraLoi("Chuc nang tro chuyen tu do can cau hinh \"ai.api.key\" trong "
+                    + "application.properties de hoat dong day du. Hien tai toi chi co the tra loi cau hoi "
+                    + "ve cong no va thong tin sinh vien (VD: \"Cong no cua SV001\").", null);
 
         } catch (SQLException e) {
-            return "Xin loi, he thong dang gap su co khi truy van du lieu. Vui long thu lai sau.";
+            return new KetQuaTraLoi("Xin loi, he thong dang gap su co khi truy van du lieu. Vui long thu lai sau.", null);
         } catch (Exception e) {
-            return "Xin loi, toi khong the tra loi cau hoi nay luc nay. Chi tiet loi: " + e.getMessage();
+            return new KetQuaTraLoi("Xin loi, toi khong the tra loi cau hoi nay luc nay. Chi tiet loi: " + e.getMessage(), null);
         }
+    }
+
+    public String traLoi(String cauHoi) {
+        return traLoiChiTiet(cauHoi).getVanBan();
+    }
+
+    public String traLoiVoiAnh(String cauHoi, String base64Anh, String loaiAnh) {
+        if (!ChatbotClient.daCauHinh()) {
+            return "Chuc nang doc anh can cau hinh \"ai.api.key\" trong application.properties de hoat dong.";
+        }
+        try {
+            String cauHoiCuoi = (cauHoi == null || cauHoi.isBlank()) ? "Hay mo ta va phan tich anh nay." : cauHoi;
+            return ChatbotClient.goiVoiAnh(SYSTEM_PROMPT, cauHoiCuoi, base64Anh, loaiAnh);
+        } catch (Exception e) {
+            return "Khong the phan tich anh luc nay. Chi tiet loi: " + e.getMessage();
+        }
+    }
+
+    /** Bo dau tieng Viet + chuyen chu thuong, dung de so khop tu khoa khong phu thuoc nguoi dung go co dau hay khong. */
+    private String boDauTiengViet(String s) {
+        if (s == null) return "";
+        String norm = Normalizer.normalize(s.toLowerCase(), Normalizer.Form.NFD);
+        return norm.replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .replace('đ', 'd').replace('Đ', 'D');
+    }
+
+    private String timMaSVTrongCauHoi(String cauHoi) {
+        Matcher mChu = PATTERN_MA_SV_CHU.matcher(cauHoi.toUpperCase());
+        if (mChu.find()) return mChu.group();
+        Matcher mSo = PATTERN_MA_SV_SO.matcher(cauHoi);
+        if (mSo.find()) return mSo.group();
+        return null;
     }
 
     private String traLoiCongNo(String maSV) throws SQLException {
@@ -89,50 +137,34 @@ public class ChatbotService {
                 + " d, tren " + hoaDons.size() + " hoa don. Vui long thanh toan som de tranh bi tinh la phi qua han.";
     }
 
-    /** Goi API AI that (vi du Anthropic Messages API) khi da cau hinh API key. */
-    private String goiAIThat(String cauHoi) {
-        try {
-            String apiKey = AppConfig.get("ai.api.key");
-            String apiUrl = AppConfig.get("ai.api.url");
-            String model = AppConfig.get("ai.model");
-
-            String noiDungThoat = cauHoi.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
-            String jsonBody = "{"
-                    + "\"model\":\"" + model + "\","
-                    + "\"max_tokens\":300,"
-                    + "\"messages\":[{\"role\":\"user\",\"content\":\"" + noiDungThoat + "\"}]"
-                    + "}";
-
-            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(apiUrl))
-                    .header("Content-Type", "application/json")
-                    .header("x-api-key", apiKey)
-                    .header("anthropic-version", "2023-06-01")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                    .build();
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                return trichXuatNoiDung(response.body());
-            }
-            return "Khong the ket noi toi dich vu AI luc nay (ma loi " + response.statusCode() + ").";
-        } catch (Exception e) {
-            return "Khong the ket noi toi dich vu AI luc nay. Vui long thu lai sau.";
+    private KetQuaTraLoi traLoiThongTinSinhVien(String maSV) throws SQLException {
+        SinhVien sv = sinhVienDAO.timTheoMa(maSV);
+        if (sv == null) {
+            return new KetQuaTraLoi("Khong tim thay sinh vien co ma \"" + maSV + "\" trong he thong. "
+                    + "Vui long kiem tra lai dung ma sinh vien.", null);
         }
+
+        StringBuilder vanBan = new StringBuilder();
+        vanBan.append("Thong tin sinh vien ").append(sv.getHoTen())
+                .append(" (Ma SV: ").append(sv.getMaSV()).append(")\n")
+                .append("- Lop: ").append(sv.getLop() == null ? "(chua co)" : sv.getLop()).append("\n")
+                .append("- Khoa: ").append(sv.getKhoa() == null ? "(chua co)" : sv.getKhoa()).append("\n")
+                .append("- Trang thai: ").append(sv.isTrangThai() ? "Dang hoc" : "Da nghi hoc");
+
+        String duongDanAnh = timDuongDanAnhDaiDien(sv.getMaSV());
+        if (duongDanAnh == null) {
+            vanBan.append("\n\n(Sinh vien nay chua co anh dai dien trong he thong.)");
+        }
+
+        return new KetQuaTraLoi(vanBan.toString(), duongDanAnh);
     }
 
-    /** Trich xuat text tra loi tho tu JSON cua Anthropic Messages API (khong dung thu vien JSON ngoai). */
-    private String trichXuatNoiDung(String json) {
-        String marker = "\"text\":\"";
-        int start = json.indexOf(marker);
-        if (start < 0) return "Khong doc duoc phan hoi tu AI.";
-        start += marker.length();
-        int end = json.indexOf("\"", start);
-        while (end > 0 && json.charAt(end - 1) == '\\') {
-            end = json.indexOf("\"", end + 1);
+    private String timDuongDanAnhDaiDien(String maSV) {
+        String[] duoi = {"png", "jpg", "jpeg"};
+        for (String d : duoi) {
+            File f = new File("avatars/" + maSV + "." + d);
+            if (f.exists() && f.isFile()) return f.getAbsolutePath();
         }
-        if (end < 0) return "Khong doc duoc phan hoi tu AI.";
-        return json.substring(start, end).replace("\\n", "\n").replace("\\\"", "\"");
+        return null;
     }
 }

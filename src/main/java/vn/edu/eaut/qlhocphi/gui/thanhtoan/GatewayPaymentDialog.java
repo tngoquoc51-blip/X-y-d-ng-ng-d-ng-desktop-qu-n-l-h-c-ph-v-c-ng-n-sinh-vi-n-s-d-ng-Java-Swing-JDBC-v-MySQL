@@ -138,13 +138,7 @@ public class GatewayPaymentDialog extends JDialog {
 
     private void dongVaDungServer() {
         dispose();
-        // Tri hoan dung server thay vi dung ngay lap tuc: cong thanh toan (dac biet MoMo)
-        // co the goi IPN (server-to-server) VA redirect trinh duyet gan nhu dong thoi,
-        // hoac retry IPN. Neu dung server ngay khi xu ly xong request dau tien, cac
-        // request con lai dang bay toi se bi mat ket noi dot ngot -> ngrok bao 502.
-        javax.swing.Timer timer = new javax.swing.Timer(5000, e -> GatewayCallbackServer.stop());
-        timer.setRepeats(false);
-        timer.start();
+        GatewayCallbackServer.henTat(5000);
     }
 
     private String rootMessage(Exception ex) {

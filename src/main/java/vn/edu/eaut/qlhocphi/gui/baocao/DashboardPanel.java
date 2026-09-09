@@ -3,6 +3,7 @@ package vn.edu.eaut.qlhocphi.gui.baocao;
 import vn.edu.eaut.qlhocphi.bus.BaoCaoService;
 import vn.edu.eaut.qlhocphi.bus.CongNoService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
+import vn.edu.eaut.qlhocphi.gui.common.AutoRefreshTimer;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.model.HoaDonHocPhi;
 import vn.edu.eaut.qlhocphi.model.TrangThaiHoaDon;
@@ -19,11 +20,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Man hinh Dashboard "Thong ke & Bao cao" - ban nang cap day du cho do an tot
- * nghiep: banner dong bo, 5 the KPI rieng biet (khong nhoi chung), the ty le
- * thu hoc phi dang thanh tien do, 2 bieu do co nhan gia tri/% ro rang, va them
- * moi khoi "Top 5 sinh vien no nhieu nhat" - phan phan tich sau ma ban cu
- * chua co. Toan bo ve bang Java2D thuan, khong can them thu vien bieu do ngoai.
+ * Màn hình Dashboard "Thống kê & Báo cáo" - bản nâng cấp đầy đủ cho đồ án tốt
+ * nghiệp: banner đồng bộ, 5 thẻ KPI riêng biệt (không nhồi chung), thẻ tỷ lệ
+ * thu học phí dạng thanh tiến độ, 2 biểu đồ có nhãn giá trị/% rõ ràng, và thêm
+ * mới khối "Top 5 sinh viên nợ nhiều nhất" - phần phân tích sâu mà bản cũ
+ * chưa có. Toàn bộ vẽ bằng Java2D thuần, không cần thêm thư viện biểu đồ ngoài.
  */
 public class DashboardPanel extends JPanel {
     private final BaoCaoService baoCaoService = new BaoCaoService();
@@ -36,6 +37,8 @@ public class DashboardPanel extends JPanel {
     private JLabel lblTyLeThuChuoi;
     private BarChartPanel bieuDoCot;
     private PieChartPanel bieuDoTron;
+    private HinhThucPieChartPanel bieuDoHinhThuc;
+    private LineChartPanel bieuDoXuHuong;
     private JPanel khoiTopNo;
     private JButton btnXuatBaoCao;
 
@@ -55,6 +58,8 @@ public class DashboardPanel extends JPanel {
         giua.add(Box.createRigidArea(new Dimension(0, 16)));
         giua.add(buildBieuDo());
         giua.add(Box.createRigidArea(new Dimension(0, 16)));
+        giua.add(buildBieuDoNangCao());
+        giua.add(Box.createRigidArea(new Dimension(0, 16)));
         giua.add(buildTopNoCard());
 
         JScrollPane scroll = new JScrollPane(bocNgoai(giua));
@@ -65,9 +70,11 @@ public class DashboardPanel extends JPanel {
         add(scroll, BorderLayout.CENTER);
 
         taiDuLieu();
+        // 45s vì màn hình này tính biểu đồ, nên độ tải CSDL hơn các màn còn lại.
+        AutoRefreshTimer.gan(this, 45, this::taiDuLieu);
     }
 
-    /** Bam sat chieu rong khung cuon, khong de trong khoang trang lech ben phai. */
+    /** Bám sát chiều rộng khung cuộn, không để trống khoảng trắng lệch bên phải. */
     private JPanel bocNgoai(JPanel noiDung) {
         JPanel wrap = new KhungCuonToanChieuRong(new BorderLayout());
         wrap.setOpaque(false);
@@ -84,7 +91,7 @@ public class DashboardPanel extends JPanel {
         @Override public boolean getScrollableTracksViewportHeight() { return false; }
     }
 
-    // ================== HEADER (banner + logo, dong bo cac trang khac) ==================
+    // ================== HEADER (banner + logo, đồng bộ các trang khác) ==================
 
     private JPanel buildHeader() {
         JPanel banner = UITheme.gradientBanner();
@@ -99,10 +106,10 @@ public class DashboardPanel extends JPanel {
         JPanel chuText = new JPanel();
         chuText.setOpaque(false);
         chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
-        JLabel tieuDe = new JLabel("Thong ke & Bao cao");
+        JLabel tieuDe = new JLabel("Thống kê & Báo cáo");
         tieuDe.setFont(UITheme.FONT_TITLE);
         tieuDe.setForeground(Color.WHITE);
-        JLabel phu = new JLabel("Tong quan tai chinh, ty le thu va phan tich cong no toan truong");
+        JLabel phu = new JLabel("Tổng quan tài chính, tỷ lệ thu và phân tích công nợ toàn trường");
         phu.setFont(UITheme.FONT_BASE);
         phu.setForeground(new Color(255, 255, 255, 210));
         chuText.add(tieuDe);
@@ -111,7 +118,7 @@ public class DashboardPanel extends JPanel {
         trai.add(chuText, BorderLayout.CENTER);
         banner.add(trai, BorderLayout.WEST);
 
-        btnXuatBaoCao = new JButton("Xuat bao cao");
+        btnXuatBaoCao = new JButton("Xuất báo cáo");
         btnXuatBaoCao.setFont(UITheme.FONT_BOLD);
         btnXuatBaoCao.setBackground(Color.WHITE);
         btnXuatBaoCao.setForeground(UITheme.PRIMARY_DARK);
@@ -155,16 +162,16 @@ public class DashboardPanel extends JPanel {
         return badge;
     }
 
-    // ================== 5 THE KPI RIENG BIET (khong nhoi chung nhu ban cu) ==================
+    // ================== 5 THẺ KPI RIÊNG BIỆT (không nhồi chung như bản cũ) ==================
 
     private JPanel buildTheTongQuan() {
         theTongQuan = new JPanel(new GridLayout(1, 5, 14, 0));
         theTongQuan.setOpaque(false);
-        theTongQuan.add(UITheme.statCard("Tong so hoa don", "0", UITheme.TINT_BLUE, UITheme.TEXT_BLUE));
-        theTongQuan.add(UITheme.statCard("Tong hoc phi", "0 d", UITheme.TINT_VIOLET, UITheme.TEXT_VIOLET));
-        theTongQuan.add(UITheme.statCard("Da thu", "0 d", UITheme.TINT_GREEN, UITheme.TEXT_GREEN));
-        theTongQuan.add(UITheme.statCard("Con no", "0 d", UITheme.TINT_RED, UITheme.TEXT_RED));
-        theTongQuan.add(UITheme.statCard("Hoa don qua han", "0", UITheme.TINT_RED, UITheme.TEXT_RED));
+        theTongQuan.add(UITheme.statCard("Tổng số hóa đơn", "0", UITheme.TINT_BLUE, UITheme.TEXT_BLUE));
+        theTongQuan.add(UITheme.statCard("Tổng học phí", "0 đ", UITheme.TINT_VIOLET, UITheme.TEXT_VIOLET));
+        theTongQuan.add(UITheme.statCard("Đã thu", "0 đ", UITheme.TINT_GREEN, UITheme.TEXT_GREEN));
+        theTongQuan.add(UITheme.statCard("Còn nợ", "0 đ", UITheme.TINT_RED, UITheme.TEXT_RED));
+        theTongQuan.add(UITheme.statCard("Hóa đơn quá hạn", "0", UITheme.TINT_RED, UITheme.TEXT_RED));
         return theTongQuan;
     }
 
@@ -183,7 +190,7 @@ public class DashboardPanel extends JPanel {
         }
     }
 
-    // ================== TY LE THU HOC PHI (thanh tien do) ==================
+    // ================== TỶ LỆ THU HỌC PHÍ (thanh tiến độ) ==================
 
     private JPanel buildTyLeThuCard() {
         theTyLeThu = UITheme.card();
@@ -191,12 +198,12 @@ public class DashboardPanel extends JPanel {
 
         JPanel dongTren = new JPanel(new BorderLayout());
         dongTren.setOpaque(false);
-        JLabel lblTieuDe = new JLabel("Ty le thu hoc phi toan truong");
+        JLabel lblTieuDe = new JLabel("Tỷ lệ thu học phí toàn trường");
         lblTieuDe.setFont(UITheme.FONT_BASE);
         lblTieuDe.setForeground(UITheme.TEXT_PRIMARY);
         dongTren.add(lblTieuDe, BorderLayout.WEST);
 
-        lblTyLeThuChuoi = new JLabel("0%  (0 d / 0 d)");
+        lblTyLeThuChuoi = new JLabel("0%  (0 đ / 0 đ)");
         lblTyLeThuChuoi.setFont(UITheme.FONT_BOLD);
         lblTyLeThuChuoi.setForeground(UITheme.TEXT_MUTED);
         dongTren.add(lblTyLeThuChuoi, BorderLayout.EAST);
@@ -209,7 +216,7 @@ public class DashboardPanel extends JPanel {
         return theTyLeThu;
     }
 
-    /** Thanh tien do bo tron ve tay - dung lai kieu da lam o SinhVienCongNoPanel. */
+    /** Thanh tiến độ bo tròn vẽ tay - dùng lại kiểu đã làm ở SinhVienCongNoPanel. */
     private static class TienDoBar extends JComponent {
         private int phanTram = 0;
         void setPhanTram(int p) { this.phanTram = p; repaint(); }
@@ -230,7 +237,7 @@ public class DashboardPanel extends JPanel {
         }
     }
 
-    // ================== 2 BIEU DO (co nhan gia tri/%) ==================
+    // ================== 2 BIỂU ĐỒ (có nhãn giá trị/%) ==================
 
     private JPanel buildBieuDo() {
         JPanel row = new JPanel(new GridLayout(1, 2, 16, 0));
@@ -240,14 +247,14 @@ public class DashboardPanel extends JPanel {
 
         JPanel cardCot = UITheme.card();
         cardCot.setLayout(new BorderLayout(0, 8));
-        cardCot.add(UITheme.sectionLabel("Tong thu theo hoc ky"), BorderLayout.NORTH);
+        cardCot.add(UITheme.sectionLabel("Tổng thu theo học kỳ"), BorderLayout.NORTH);
         bieuDoCot = new BarChartPanel();
         cardCot.add(bieuDoCot, BorderLayout.CENTER);
         row.add(cardCot);
 
         JPanel cardTron = UITheme.card();
         cardTron.setLayout(new BorderLayout(0, 8));
-        cardTron.add(UITheme.sectionLabel("Trang thai hoa don"), BorderLayout.NORTH);
+        cardTron.add(UITheme.sectionLabel("Trạng thái hóa đơn"), BorderLayout.NORTH);
         bieuDoTron = new PieChartPanel();
         cardTron.add(bieuDoTron, BorderLayout.CENTER);
         row.add(cardTron);
@@ -255,12 +262,36 @@ public class DashboardPanel extends JPanel {
         return row;
     }
 
-    // ================== TOP 5 SINH VIEN NO NHIEU NHAT (moi hoan toan) ==================
+    /** Hàng biểu đồ thứ 2 (mới thêm): tỷ lệ theo hình thức thanh toán + xu hướng thu theo tháng. */
+    private JPanel buildBieuDoNangCao() {
+        JPanel row = new JPanel(new GridLayout(1, 2, 16, 0));
+        row.setOpaque(false);
+        row.setPreferredSize(new Dimension(10, 300));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
+
+        JPanel cardHinhThuc = UITheme.card();
+        cardHinhThuc.setLayout(new BorderLayout(0, 8));
+        cardHinhThuc.add(UITheme.sectionLabel("Tỷ lệ theo hình thức thanh toán"), BorderLayout.NORTH);
+        bieuDoHinhThuc = new HinhThucPieChartPanel();
+        cardHinhThuc.add(bieuDoHinhThuc, BorderLayout.CENTER);
+        row.add(cardHinhThuc);
+
+        JPanel cardXuHuong = UITheme.card();
+        cardXuHuong.setLayout(new BorderLayout(0, 8));
+        cardXuHuong.add(UITheme.sectionLabel("Xu hướng thu học phí theo tháng"), BorderLayout.NORTH);
+        bieuDoXuHuong = new LineChartPanel();
+        cardXuHuong.add(bieuDoXuHuong, BorderLayout.CENTER);
+        row.add(cardXuHuong);
+
+        return row;
+    }
+
+    // ================== TOP 5 SINH VIÊN NỢ NHIỀU NHẤT (mới hoàn toàn) ==================
 
     private JPanel buildTopNoCard() {
         JPanel card = UITheme.card();
         card.setLayout(new BorderLayout(0, 10));
-        card.add(UITheme.sectionLabel("Top 5 sinh vien con no hoc phi nhieu nhat"), BorderLayout.NORTH);
+        card.add(UITheme.sectionLabel("Top 5 sinh viên còn nợ học phí nhiều nhất"), BorderLayout.NORTH);
 
         khoiTopNo = new JPanel();
         khoiTopNo.setOpaque(false);
@@ -278,7 +309,7 @@ public class DashboardPanel extends JPanel {
                 .toList();
 
         if (top5.isEmpty()) {
-            JLabel trong = new JLabel("Khong co sinh vien nao con no hoc phi");
+            JLabel trong = new JLabel("Không có sinh viên nào còn nợ học phí");
             trong.setFont(UITheme.FONT_BASE);
             trong.setForeground(UITheme.TEXT_MUTED);
             khoiTopNo.add(trong);
@@ -292,7 +323,7 @@ public class DashboardPanel extends JPanel {
         khoiTopNo.repaint();
     }
 
-    /** 1 dong: avatar + ten + hoc ky, thanh mini the hien ti le so voi nguoi no cao nhat, so tien dang pill do. */
+    /** 1 dòng: avatar + tên + học kỳ, thanh mini thể hiện tỷ lệ so với người nợ cao nhất, số tiền dạng pill đỏ. */
     private JPanel dongTopNo(HoaDonHocPhi hd, BigDecimal noCaoNhat) {
         JPanel row = new JPanel(new BorderLayout(12, 0));
         row.setOpaque(false);
@@ -365,7 +396,7 @@ public class DashboardPanel extends JPanel {
         }
     }
 
-    // ================== TAI DU LIEU ==================
+    // ================== TẢI DỮ LIỆU ==================
 
     private void taiDuLieu() {
         SwingWorker<Object[], Void> worker = new SwingWorker<>() {
@@ -375,7 +406,9 @@ public class DashboardPanel extends JPanel {
                 Map<String, BigDecimal> thuTheoHocKy = baoCaoService.thongKeThuTheoHocKy();
                 Map<TrangThaiHoaDon, Long> theoTrangThai = baoCaoService.thongKeSoLuongTheoTrangThai();
                 List<HoaDonHocPhi> danhSachNo = congNoService.layDanhSachConNo();
-                return new Object[]{tongQuan, thuTheoHocKy, theoTrangThai, danhSachNo};
+                Map<String, BigDecimal> thuTheoHinhThuc = baoCaoService.thongKeThuTheoHinhThuc();
+                Map<String, BigDecimal> thuTheoThang = baoCaoService.thongKeThuTheoThang();
+                return new Object[]{tongQuan, thuTheoHocKy, theoTrangThai, danhSachNo, thuTheoHinhThuc, thuTheoThang};
             }
 
             @Override
@@ -387,14 +420,18 @@ public class DashboardPanel extends JPanel {
                     Map<String, BigDecimal> thuTheoHocKy = (Map<String, BigDecimal>) ketQua[1];
                     Map<TrangThaiHoaDon, Long> theoTrangThai = (Map<TrangThaiHoaDon, Long>) ketQua[2];
                     List<HoaDonHocPhi> danhSachNo = (List<HoaDonHocPhi>) ketQua[3];
+                    Map<String, BigDecimal> thuTheoHinhThuc = (Map<String, BigDecimal>) ketQua[4];
+                    Map<String, BigDecimal> thuTheoThang = (Map<String, BigDecimal>) ketQua[5];
 
                     capNhatTheTongQuan(tongQuan);
                     capNhatTyLeThu(tongQuan);
                     bieuDoCot.setDuLieu(thuTheoHocKy);
                     bieuDoTron.setDuLieu(theoTrangThai);
+                    bieuDoHinhThuc.setDuLieu(thuTheoHinhThuc);
+                    bieuDoXuHuong.setDuLieu(thuTheoThang);
                     capNhatTopNo(danhSachNo);
                 } catch (Exception ex) {
-                    UIUtils.thongBaoLoi(DashboardPanel.this, "Khong the tai du lieu thong ke.\n" + rootMessage(ex));
+                    UIUtils.thongBaoLoi(DashboardPanel.this, "Không thể tải dữ liệu thống kê.\n" + rootMessage(ex));
                 }
             }
         };
@@ -417,7 +454,7 @@ public class DashboardPanel extends JPanel {
         return cause.getMessage() != null ? cause.getMessage() : cause.toString();
     }
 
-    // ================== BIEU DO COT (co them nhan gia tri tren dinh cot) ==================
+    // ================== BIỂU ĐỒ CỘT (có thêm nhãn giá trị trên đỉnh cột) ==================
 
     private static class BarChartPanel extends JPanel {
         private Map<String, BigDecimal> duLieu = new LinkedHashMap<>();
@@ -445,7 +482,7 @@ public class DashboardPanel extends JPanel {
             if (rongVe <= 0 || caoVe <= 0) return;
 
             if (duLieu.isEmpty()) {
-                veChuThongBao(g2, "Chua co du lieu");
+                veChuThongBao(g2, "Chưa có dữ liệu");
                 return;
             }
 
@@ -492,7 +529,7 @@ public class DashboardPanel extends JPanel {
         }
     }
 
-    // ================== BIEU DO TRON (co them % trong chu thich) ==================
+    // ================== BIỂU ĐỒ TRÒN (có thêm % trong chú thích) ==================
 
     private static class PieChartPanel extends JPanel {
         private Map<TrangThaiHoaDon, Long> duLieu = new LinkedHashMap<>();
@@ -528,7 +565,7 @@ public class DashboardPanel extends JPanel {
             if (tong == 0) {
                 g2.setColor(UITheme.TEXT_MUTED);
                 g2.setFont(UITheme.FONT_BASE);
-                String text = "Chua co du lieu";
+                String text = "Chưa có dữ liệu";
                 FontMetrics fm = g2.getFontMetrics();
                 g2.drawString(text, (w - fm.stringWidth(text)) / 2, h / 2);
                 return;
@@ -558,6 +595,172 @@ public class DashboardPanel extends JPanel {
                 String nhan = String.format("%s (%d - %.0f%%)", e.getKey().getNhan(), e.getValue(), phanTram);
                 g2.drawString(nhan, chuThichX + 18, chuThichY + 11);
                 chuThichY += 22;
+            }
+        }
+    }
+
+    // ================== BIỂU ĐỒ TRÒN THEO HÌNH THỨC THANH TOÁN (mới thêm) ==================
+
+    private static class HinhThucPieChartPanel extends JPanel {
+        private Map<String, BigDecimal> duLieu = new LinkedHashMap<>();
+
+        HinhThucPieChartPanel() {
+            setOpaque(false);
+            setPreferredSize(new Dimension(400, 260));
+        }
+
+        void setDuLieu(Map<String, BigDecimal> duLieu) {
+            this.duLieu = duLieu == null ? new LinkedHashMap<>() : duLieu;
+            repaint();
+        }
+
+        private Color mauTheoHinhThuc(String hinhThuc) {
+            switch (hinhThuc) {
+                case "TIEN_MAT": return UITheme.SUCCESS;
+                case "CHUYEN_KHOAN": return UITheme.PRIMARY;
+                case "THANH_TOAN_ONLINE": return UITheme.WARNING;
+                case "VI_DIEN_TU": return UITheme.DANGER;
+                default: return UITheme.TEXT_MUTED;
+            }
+        }
+
+        private String tenHienThi(String hinhThuc) {
+            switch (hinhThuc) {
+                case "TIEN_MAT": return "Tiền mặt";
+                case "CHUYEN_KHOAN": return "Chuyển khoản";
+                case "THANH_TOAN_ONLINE": return "Online (VNPay/MoMo)";
+                case "VI_DIEN_TU": return "Ví điện tử";
+                default: return hinhThuc;
+            }
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            BigDecimal tong = duLieu.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+            int w = getWidth(), h = getHeight();
+
+            if (tong.compareTo(BigDecimal.ZERO) == 0) {
+                g2.setColor(UITheme.TEXT_MUTED);
+                g2.setFont(UITheme.FONT_BASE);
+                String text = "Chưa có dữ liệu";
+                FontMetrics fm = g2.getFontMetrics();
+                g2.drawString(text, (w - fm.stringWidth(text)) / 2, h / 2);
+                return;
+            }
+
+            int duongKinh = Math.min(w, h) - 40;
+            int x = (w - duongKinh) / 2 - 60;
+            int y = (h - duongKinh) / 2;
+            if (x < 10) x = 10;
+
+            double goc = 90;
+            for (Map.Entry<String, BigDecimal> e : duLieu.entrySet()) {
+                double phan = 360.0 * e.getValue().doubleValue() / tong.doubleValue();
+                g2.setColor(mauTheoHinhThuc(e.getKey()));
+                g2.fill(new Arc2D.Double(x, y, duongKinh, duongKinh, goc, -phan, Arc2D.PIE));
+                goc -= phan;
+            }
+
+            int chuThichX = x + duongKinh + 30;
+            int chuThichY = y + 10;
+            g2.setFont(UITheme.FONT_BASE.deriveFont(12f));
+            for (Map.Entry<String, BigDecimal> e : duLieu.entrySet()) {
+                double phanTram = 100.0 * e.getValue().doubleValue() / tong.doubleValue();
+                g2.setColor(mauTheoHinhThuc(e.getKey()));
+                g2.fillRect(chuThichX, chuThichY, 12, 12);
+                g2.setColor(UITheme.TEXT_PRIMARY);
+                String nhan = String.format("%s (%.0f%%)", tenHienThi(e.getKey()), phanTram);
+                g2.drawString(nhan, chuThichX + 18, chuThichY + 11);
+                chuThichY += 22;
+            }
+        }
+    }
+
+    // ================== BIỂU ĐỒ ĐƯỜNG XU HƯỚNG THU THEO THÁNG (mới thêm) ==================
+
+    private static class LineChartPanel extends JPanel {
+        private Map<String, BigDecimal> duLieu = new LinkedHashMap<>();
+
+        LineChartPanel() {
+            setOpaque(false);
+            setPreferredSize(new Dimension(400, 260));
+        }
+
+        void setDuLieu(Map<String, BigDecimal> duLieu) {
+            this.duLieu = duLieu == null ? new LinkedHashMap<>() : duLieu;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth(), h = getHeight();
+            int leTrai = 70, leDuoi = 40, leTren = 30, lePhai = 20;
+            int rongVe = w - leTrai - lePhai;
+            int caoVe = h - leTren - leDuoi;
+            if (rongVe <= 0 || caoVe <= 0) return;
+
+            if (duLieu.isEmpty()) {
+                g2.setColor(UITheme.TEXT_MUTED);
+                g2.setFont(UITheme.FONT_BASE);
+                String text = "Chưa có dữ liệu";
+                FontMetrics fm = g2.getFontMetrics();
+                g2.drawString(text, (w - fm.stringWidth(text)) / 2, h / 2);
+                return;
+            }
+
+            BigDecimal max = duLieu.values().stream().reduce(BigDecimal.ZERO, BigDecimal::max);
+            if (max.compareTo(BigDecimal.ZERO) == 0) max = BigDecimal.ONE;
+
+            g2.setColor(UITheme.BORDER);
+            g2.drawLine(leTrai, leTren + caoVe, leTrai + rongVe, leTren + caoVe);
+            g2.drawLine(leTrai, leTren, leTrai, leTren + caoVe);
+
+            int soDiem = duLieu.size();
+            int khoangCach = soDiem > 1 ? rongVe / (soDiem - 1) : 0;
+
+            int[] xs = new int[soDiem];
+            int[] ys = new int[soDiem];
+            String[] nhans = duLieu.keySet().toArray(new String[0]);
+            BigDecimal[] giaTris = duLieu.values().toArray(new BigDecimal[0]);
+
+            g2.setFont(UITheme.FONT_BASE.deriveFont(10f));
+            for (int i = 0; i < soDiem; i++) {
+                double tiLe = giaTris[i].doubleValue() / max.doubleValue();
+                xs[i] = soDiem == 1 ? leTrai + rongVe / 2 : leTrai + i * khoangCach;
+                ys[i] = leTren + caoVe - (int) Math.round(tiLe * caoVe);
+
+                FontMetrics fm = g2.getFontMetrics();
+                String nhan = nhans[i];
+                int wNhan = fm.stringWidth(nhan);
+                g2.setColor(UITheme.TEXT_MUTED);
+                g2.drawString(nhan, xs[i] - wNhan / 2, leTren + caoVe + 16);
+            }
+
+            g2.setColor(UITheme.PRIMARY);
+            g2.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            for (int i = 0; i < soDiem - 1; i++) {
+                g2.drawLine(xs[i], ys[i], xs[i + 1], ys[i + 1]);
+            }
+
+            for (int i = 0; i < soDiem; i++) {
+                g2.setColor(UITheme.PRIMARY);
+                g2.fillOval(xs[i] - 4, ys[i] - 4, 8, 8);
+                g2.setColor(Color.WHITE);
+                g2.fillOval(xs[i] - 2, ys[i] - 2, 4, 4);
+
+                String nhanGiaTri = MoneyUtils.format(giaTris[i]);
+                FontMetrics fm = g2.getFontMetrics();
+                int wGT = fm.stringWidth(nhanGiaTri);
+                g2.setColor(UITheme.TEXT_PRIMARY);
+                g2.drawString(nhanGiaTri, xs[i] - wGT / 2, ys[i] - 10);
             }
         }
     }

@@ -3,10 +3,12 @@ package vn.edu.eaut.qlhocphi.gui.hocphi;
 import vn.edu.eaut.qlhocphi.bus.HocPhiService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
 import vn.edu.eaut.qlhocphi.dal.SinhVienDAO;
+import vn.edu.eaut.qlhocphi.gui.common.AutoRefreshTimer;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.model.HoaDonHocPhi;
 import vn.edu.eaut.qlhocphi.model.SinhVien;
 import vn.edu.eaut.qlhocphi.model.TrangThaiHoaDon;
+import vn.edu.eaut.qlhocphi.gui.thanhtoan.VietQRDialog;
 import vn.edu.eaut.qlhocphi.util.EmailUtils;
 import vn.edu.eaut.qlhocphi.util.ExcelExporter;
 import vn.edu.eaut.qlhocphi.util.MoneyUtils;
@@ -29,18 +31,18 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Man hinh sinh hoa don hoc phi, tim kiem/loc, xem thong ke, xuat Excel/PDF,
- * xoa hoa don, xem chi tiet (double-click dong) va gui email nhac no.
- * Ban sua loi: toolbar truoc day dung FlowLayout long trong BorderLayout nen
- * khi khong du cho se tu wrap xuong dong va de len bang du lieu ben duoi. Ban
- * nay chuyen toan bo toolbar sang GridBagLayout - khong bao gio wrap ngoai y
- * muon, moi thanh phan luon nam co dinh tren 1 hang duy nhat.
+ * Màn hình sinh hóa đơn học phí, tìm kiếm/lọc, xem thống kê, xuất Excel/PDF,
+ * xóa hóa đơn, xem chi tiết (double-click dòng) và gửi email nhắc nợ.
+ * Bản sửa lỗi: Toolbar trước đây dùng FlowLayout lồng trong BorderLayout nên
+ * khi không đủ chỗ sẽ tự wrap xuống dòng và đè lên bảng dữ liệu bên dưới. Bản
+ * này chuyển toàn bộ toolbar sang GridBagLayout - không bao giờ wrap ngoài ý
+ * muốn, mỗi thành phần luôn nằm cố định trên 1 hàng duy nhất.
  */
 public class HoaDonPanel extends JPanel {
     private final java.util.function.BiConsumer<String, String> dieuHuongTimKiem;
     private final HocPhiService hocPhiService = new HocPhiService();
     private final SinhVienDAO sinhVienDAO = new SinhVienDAO();
-
+    private final vn.edu.eaut.qlhocphi.model.TaiKhoan taiKhoan;
     private JTable table;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
@@ -51,11 +53,12 @@ public class HoaDonPanel extends JPanel {
 
     private JLabel lblTongHoaDon, lblTongDaThu, lblTongConNo, lblQuaHan;
 
-    /** Danh sach hoa don day du dang tai gan nhat - dung cho xem chi tiet/gui nhac no theo dong. */
+    /** Danh sách hóa đơn đầy đủ đang tải gần nhất - dùng cho xem chi tiết/gửi nhắc nợ theo dòng. */
     private List<HoaDonHocPhi> danhSachHienTai = new ArrayList<>();
 
-    public HoaDonPanel(java.util.function.BiConsumer<String, String> dieuHuongTimKiem) {
+    public HoaDonPanel(java.util.function.BiConsumer<String, String> dieuHuongTimKiem, vn.edu.eaut.qlhocphi.model.TaiKhoan taiKhoan) {
         this.dieuHuongTimKiem = dieuHuongTimKiem;
+        this.taiKhoan = taiKhoan;
         setLayout(new BorderLayout(0, 16));
         setOpaque(false);
         JPanel north = new JPanel();
@@ -71,6 +74,7 @@ public class HoaDonPanel extends JPanel {
         add(buildTableCard(), BorderLayout.CENTER);
 
         taiDuLieu();
+        AutoRefreshTimer.gan(this, 20, this::taiDuLieu);
     }
 
     // ================== HEADER (banner + logo) ==================
@@ -88,10 +92,10 @@ public class HoaDonPanel extends JPanel {
         JPanel chuText = new JPanel();
         chuText.setOpaque(false);
         chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
-        JLabel tieuDe = new JLabel("Hoa don hoc phi");
+        JLabel tieuDe = new JLabel("Hóa đơn học phí");
         tieuDe.setFont(UITheme.FONT_TITLE);
         tieuDe.setForeground(Color.WHITE);
-        JLabel phu = new JLabel("Sinh hoa don, tim kiem, loc trang thai va xuat bao cao");
+        JLabel phu = new JLabel("Sinh hóa đơn, tìm kiếm, lọc trạng thái và xuất báo cáo");
         phu.setFont(UITheme.FONT_BASE);
         phu.setForeground(new Color(255, 255, 255, 210));
         chuText.add(tieuDe);
@@ -100,7 +104,7 @@ public class HoaDonPanel extends JPanel {
         trai.add(chuText, BorderLayout.CENTER);
         banner.add(trai, BorderLayout.WEST);
 
-        JButton btnSinh = new JButton("+ Sinh hoa don moi");
+        JButton btnSinh = new JButton("+ Sinh hóa đơn mới");
         btnSinh.setFont(UITheme.FONT_BOLD);
         btnSinh.setBackground(Color.WHITE);
         btnSinh.setForeground(UITheme.PRIMARY_DARK);
@@ -117,7 +121,7 @@ public class HoaDonPanel extends JPanel {
         return banner;
     }
 
-    /** Logo tron ve bang Graphics2D, khong can file anh ngoai. */
+    /** Logo tròn vẽ bằng Graphics2D, không cần file ảnh ngoài. */
     private JComponent logoBadge() {
         JComponent badge = new JComponent() {
             @Override
@@ -129,7 +133,7 @@ public class HoaDonPanel extends JPanel {
                 g2.setColor(Color.WHITE);
                 g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
                 FontMetrics fm = g2.getFontMetrics();
-                String bieuTuong = "d";
+                String bieuTuong = "Đ";
                 int x = (getWidth() - fm.stringWidth(bieuTuong)) / 2;
                 int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
                 g2.drawString(bieuTuong, x, y);
@@ -141,22 +145,39 @@ public class HoaDonPanel extends JPanel {
         return badge;
     }
 
-    // ================== THONG KE NHANH ==================
+    // ================== THỐNG KÊ NHANH ==================
 
     private JPanel buildStatsRow() {
         JPanel row = new JPanel(new GridLayout(1, 4, 16, 0));
         row.setOpaque(false);
 
         lblTongHoaDon = new JLabel("0");
-        lblTongDaThu = new JLabel("0 d");
-        lblTongConNo = new JLabel("0 d");
+        lblTongDaThu = new JLabel("0 đ");
+        lblTongConNo = new JLabel("0 đ");
         lblQuaHan = new JLabel("0");
 
-        row.add(thongKeCard("Tong so hoa don", lblTongHoaDon, UITheme.PRIMARY));
-        row.add(thongKeCard("Tong da thu", lblTongDaThu, UITheme.SUCCESS));
-        row.add(thongKeCard("Tong con no", lblTongConNo, UITheme.WARNING));
-        row.add(thongKeCard("Hoa don qua han", lblQuaHan, UITheme.DANGER));
+        row.add(thongKeCard("Tổng số hóa đơn", lblTongHoaDon, UITheme.PRIMARY));
+        row.add(thongKeCard("Tổng đã thu", lblTongDaThu, UITheme.SUCCESS));
+        row.add(thongKeCard("Tổng còn nợ", lblTongConNo, UITheme.WARNING));
+        row.add(thongKeCard("Hóa đơn quá hạn", lblQuaHan, UITheme.DANGER));
         return row;
+    }
+
+    /** Nut chuc nang to mau dam rieng biet - moi nut 1 mau, khong con dung chung
+     *  kieu "secondaryButton" (vien trang nhat, de bi mo/nhat nhoa) nhu truoc.
+     *  Mau nen truyen vao la field UITheme (SUCCESS, WARNING...) nen tu dong doi
+     *  dung theo Sang/Toi, khong bi "cung mau" nhu hardcode raw Color. */
+    private JButton nutMauSac(String text, Color mauNen) {
+        JButton b = new JButton(text);
+        b.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        b.setBackground(mauNen);
+        b.setForeground(Color.WHITE);
+        b.setBorder(BorderFactory.createEmptyBorder(9, 16, 9, 16));
+        b.setFocusPainted(false);
+        b.setOpaque(true);
+        b.setBorderPainted(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return b;
     }
 
     private JPanel thongKeCard(String tieuDe, JLabel giaTri, Color mauNhan) {
@@ -178,7 +199,7 @@ public class HoaDonPanel extends JPanel {
         return card;
     }
 
-    // ================== TOOLBAR: GRIDBAGLAYOUT - KHONG BAO GIO WRAP ==================
+    // ================== TOOLBAR: GRIDBAGLAYOUT - KHÔNG BAO GIỜ WRAP ==================
 
     private JPanel buildToolbar() {
         JPanel toolbar = new JPanel(new GridBagLayout());
@@ -191,7 +212,7 @@ public class HoaDonPanel extends JPanel {
         int col = 0;
 
         gbc.gridx = col++;
-        toolbar.add(UIUtils.formLabel("Tim kiem:"), gbc);
+        toolbar.add(UIUtils.formLabel("Tìm kiếm:"), gbc);
 
         txtTimKiem = UIUtils.textField(15);
         txtTimKiem.getDocument().addDocumentListener(new DocumentListener() {
@@ -203,17 +224,17 @@ public class HoaDonPanel extends JPanel {
         toolbar.add(txtTimKiem, gbc);
 
         gbc.gridx = col++;
-        toolbar.add(UIUtils.formLabel("Trang thai:"), gbc);
+        toolbar.add(UIUtils.formLabel("Trạng thái:"), gbc);
 
         cboTrangThai = new JComboBox<>(new String[]{
-                "Tat ca trang thai", "Chua dong", "Dong mot phan", "Da dong du", "Qua han"
+                "Tất cả trạng thái", "Chưa đóng", "Đóng một phần", "Đã đóng đủ", "Quá hạn"
         });
         cboTrangThai.setFont(UITheme.FONT_BASE);
         cboTrangThai.addActionListener(e -> apDungBoLoc());
         gbc.gridx = col++;
         toolbar.add(cboTrangThai, gbc);
 
-        // O trong gian no - day toan bo nut hanh dong ve sat le phai, khong bao gio wrap
+        // Ô trống giãn nở - đẩy toàn bộ nút hành động về sát lề phải, không bao giờ wrap
         gbc.gridx = col++;
         gbc.weightx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -221,43 +242,55 @@ public class HoaDonPanel extends JPanel {
         gbc.weightx = 0;
         gbc.fill = GridBagConstraints.NONE;
 
-        JButton btnLamMoi = UITheme.secondaryButton("Lam moi");
+        JButton btnLamMoi = nutMauSac("Làm mới", UITheme.SIDEBAR_BLUE);
         btnLamMoi.addActionListener(e -> taiDuLieu());
         gbc.gridx = col++;
         toolbar.add(btnLamMoi, gbc);
 
-        JButton btnNhacNo = UITheme.secondaryButton("Gui nhac no");
+        JButton btnNhacNo = nutMauSac("Gửi nhắc nợ", UITheme.WARNING);
         btnNhacNo.addActionListener(e -> guiNhacNoDaChon());
         gbc.gridx = col++;
         toolbar.add(btnNhacNo, gbc);
 
-        JButton btnXuatExcel = UITheme.secondaryButton("Xuat Excel");
+        JButton btnQR = nutMauSac("Mã QR chuyển khoản", UITheme.SIDEBAR_PURPLE);
+        btnQR.addActionListener(e -> moQRDaChon());
+        gbc.gridx = col++;
+        toolbar.add(btnQR, gbc);
+
+        JButton btnMienGiam = nutMauSac("Miễn giảm", UITheme.SUCCESS);
+        btnMienGiam.addActionListener(e -> moMienGiam());
+        gbc.gridx = col++;
+        toolbar.add(btnMienGiam, gbc);
+
+        JButton btnXuatExcel = nutMauSac("Xuất Excel", UITheme.ACCENT_TEAL);
         btnXuatExcel.addActionListener(e -> xuatExcel());
         gbc.gridx = col++;
         toolbar.add(btnXuatExcel, gbc);
 
-        JButton btnXuatPDF = UITheme.secondaryButton("Xuat PDF");
+        JButton btnXuatPDF = nutMauSac("Xuất PDF", UITheme.PRIMARY_DARK);
         btnXuatPDF.addActionListener(e -> xuatPDF());
         gbc.gridx = col++;
         toolbar.add(btnXuatPDF, gbc);
 
-        JButton btnXoa = UITheme.dangerButton("Xoa hoa don");
-        btnXoa.addActionListener(e -> xoaHoaDonDaChon());
-        gbc.gridx = col++;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        toolbar.add(btnXoa, gbc);
+        if (taiKhoan.getVaiTro() != vn.edu.eaut.qlhocphi.model.VaiTro.KETOAN) {
+            JButton btnXoa = UITheme.dangerButton("Xóa hóa đơn");
+            btnXoa.addActionListener(e -> xoaHoaDonDaChon());
+            gbc.gridx = col++;
+            gbc.insets = new Insets(0, 0, 0, 0);
+            toolbar.add(btnXoa, gbc);
+        }
 
         return toolbar;
     }
 
-    // ================== BANG DU LIEU ==================
+    // ================== BẢNG DỮ LIỆU ==================
 
     private JPanel buildTableCard() {
         JPanel card = UITheme.card();
         card.setLayout(new BorderLayout(0, 10));
 
         tableModel = new DefaultTableModel(new Object[]{
-                "Ma HD", "Ma SV", "Ho ten", "Hoc ky", "So TC", "So tien", "Da nop", "Con no", "Trang thai"
+                "Mã HĐ", "Mã SV", "Họ tên", "Học kỳ", "Số TC", "Số tiền", "Đã nộp", "Còn nợ", "Trạng thái"
         }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -265,12 +298,12 @@ public class HoaDonPanel extends JPanel {
         table = new JTable(tableModel);
         UIUtils.styleTable(table);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setToolTipText("Nhap doi (double-click) 1 dong de xem chi tiet hoa don");
+        table.setToolTipText("Nhấp đôi (double-click) 1 dòng để xem chi tiết hóa đơn");
 
         sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
 
-        // renderer soc xen ke cho toan bang
+        // Renderer sọc xọc kẻ cho toàn bảng
         DefaultTableCellRenderer stripedRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
@@ -287,10 +320,10 @@ public class HoaDonPanel extends JPanel {
         for (int i = 0; i < table.getColumnCount(); i++) {
             table.getColumnModel().getColumn(i).setCellRenderer(stripedRenderer);
         }
-        // renderer rieng cho cot Trang thai: hien thi dang "the mau"
+        // Renderer riêng cho cột Trạng thái: hiển thị dạng "thẻ màu"
         table.getColumnModel().getColumn(8).setCellRenderer(new TrangThaiCellRenderer());
 
-        // Double-click 1 dong -> xem chi tiet hoa don (tinh nang "quan ly" moi)
+        // Double-click 1 dòng -> xem chi tiết hóa đơn (tính năng "quản lý" mới)
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -302,7 +335,7 @@ public class HoaDonPanel extends JPanel {
         scroll.setBorder(BorderFactory.createEmptyBorder());
         card.add(scroll, BorderLayout.CENTER);
 
-        lblSoLuong = new JLabel("Hien thi 0 / 0 hoa don");
+        lblSoLuong = new JLabel("Hiển thị 0 / 0 hóa đơn");
         lblSoLuong.setFont(UITheme.FONT_BASE);
         lblSoLuong.setForeground(UITheme.TEXT_MUTED);
         card.add(lblSoLuong, BorderLayout.SOUTH);
@@ -310,7 +343,7 @@ public class HoaDonPanel extends JPanel {
         return card;
     }
 
-    /** Renderer ve trang thai dang "the mau" (pill) thay vi chu thuong. */
+    /** Renderer vẽ trạng thái dạng "thẻ màu" (pill) thay vì chữ thường. */
     private class TrangThaiCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
@@ -340,7 +373,7 @@ public class HoaDonPanel extends JPanel {
         }
     }
 
-    // ================== TIM KIEM / LOC ==================
+    // ================== TÌM KIẾM / LỌC ==================
 
     private void apDungBoLoc() {
         List<RowFilter<Object, Object>> danhSachLoc = new ArrayList<>();
@@ -350,7 +383,7 @@ public class HoaDonPanel extends JPanel {
             danhSachLoc.add(RowFilter.regexFilter("(?i)" + Pattern.quote(tuKhoa), 1, 2));
         }
         String trangThai = (String) cboTrangThai.getSelectedItem();
-        if (trangThai != null && !trangThai.equals("Tat ca trang thai")) {
+        if (trangThai != null && !trangThai.equals("Tất cả trạng thái")) {
             danhSachLoc.add(RowFilter.regexFilter("^" + Pattern.quote(trangThai) + "$", 8));
         }
 
@@ -359,10 +392,10 @@ public class HoaDonPanel extends JPanel {
     }
 
     private void capNhatSoLuongHienThi() {
-        lblSoLuong.setText("Hien thi " + table.getRowCount() + " / " + tableModel.getRowCount() + " hoa don");
+        lblSoLuong.setText("Hiển thị " + table.getRowCount() + " / " + tableModel.getRowCount() + " hóa đơn");
     }
 
-    // ================== TAI DU LIEU + THONG KE ==================
+    // ================== TẢI DỮ LIỆU + THỐNG KÊ ==================
 
     private void taiDuLieu() {
         SwingWorker<List<HoaDonHocPhi>, Void> worker = new SwingWorker<>() {
@@ -383,9 +416,12 @@ public class HoaDonPanel extends JPanel {
                     int soQuaHan = 0;
 
                     for (HoaDonHocPhi hd : list) {
+                        String soTienHienThi = hd.getTyLeMienGiam() != null && hd.getTyLeMienGiam().compareTo(BigDecimal.ZERO) > 0
+                                ? MoneyUtils.format(hd.tinhSoTienPhaiDong()) + " (giảm " + hd.getTyLeMienGiam().intValue() + "%)"
+                                : MoneyUtils.format(hd.getSoTien());
                         tableModel.addRow(new Object[]{
                                 hd.getMaHoaDon(), hd.getMaSV(), hd.getTenSV(), hd.getTenHocKy(),
-                                hd.getSoTinChi(), MoneyUtils.format(hd.getSoTien()),
+                                hd.getSoTinChi(), soTienHienThi,
                                 MoneyUtils.format(hd.getDaNop()), MoneyUtils.format(hd.tinhConNo()),
                                 hd.tinhTrangThai().getNhan()
                         });
@@ -401,14 +437,14 @@ public class HoaDonPanel extends JPanel {
 
                     apDungBoLoc();
                 } catch (Exception ex) {
-                    UIUtils.thongBaoLoi(HoaDonPanel.this, "Khong the tai danh sach hoa don.");
+                    UIUtils.thongBaoLoi(HoaDonPanel.this, "Không thể tải danh sách hóa đơn.");
                 }
             }
         };
         worker.execute();
     }
 
-    /** Tim hoa don day du (co day du field) tuong ung voi dong dang chon tren bang. */
+    /** Tìm hóa đơn đầy đủ (có đầy đủ field) tương ứng với dòng đang chọn trên bảng. */
     private HoaDonHocPhi layHoaDonDangChon() {
         int viewRow = table.getSelectedRow();
         if (viewRow < 0) return null;
@@ -419,7 +455,7 @@ public class HoaDonPanel extends JPanel {
                 .findFirst().orElse(null);
     }
 
-    // ================== XEM CHI TIET (double-click) ==================
+    // ================== XEM CHI TIẾT (double-click) ==================
 
     private void xemChiTietDongDangChon() {
         HoaDonHocPhi hd = layHoaDonDangChon();
@@ -429,22 +465,27 @@ public class HoaDonPanel extends JPanel {
         noiDung.setLayout(new BoxLayout(noiDung, BoxLayout.Y_AXIS));
         noiDung.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
-        dongChiTiet(noiDung, "Ma hoa don", "#" + hd.getMaHoaDon());
-        dongChiTiet(noiDung, "Sinh vien", hd.getTenSV() + " (" + hd.getMaSV() + ")");
-        dongChiTiet(noiDung, "Hoc ky", hd.getTenHocKy());
-        dongChiTiet(noiDung, "So tin chi dang ky", String.valueOf(hd.getSoTinChi()));
+        dongChiTiet(noiDung, "Mã hóa đơn", "#" + hd.getMaHoaDon());
+        dongChiTiet(noiDung, "Sinh viên", hd.getTenSV() + " (" + hd.getMaSV() + ")");
+        dongChiTiet(noiDung, "Học kỳ", hd.getTenHocKy());
+        dongChiTiet(noiDung, "Số tín chỉ đăng ký", String.valueOf(hd.getSoTinChi()));
         noiDung.add(Box.createRigidArea(new Dimension(0, 8)));
-        dongChiTiet(noiDung, "Tong hoc phi", MoneyUtils.format(hd.getSoTien()));
-        dongChiTiet(noiDung, "Da nop", MoneyUtils.format(hd.getDaNop()));
-        dongChiTiet(noiDung, "Con no", MoneyUtils.format(hd.tinhConNo()));
-        dongChiTiet(noiDung, "Trang thai", hd.tinhTrangThai().getNhan());
+        dongChiTiet(noiDung, "Học phí gốc", MoneyUtils.format(hd.getSoTien()));
+        if (hd.getTyLeMienGiam() != null && hd.getTyLeMienGiam().compareTo(BigDecimal.ZERO) > 0) {
+            dongChiTiet(noiDung, "Miễn giảm", hd.getTyLeMienGiam().intValue() + "% (-" + MoneyUtils.format(hd.tinhSoTienMienGiam()) + ")");
+            dongChiTiet(noiDung, "Lý do", hd.getLyDoMienGiam() == null ? "-" : hd.getLyDoMienGiam());
+            dongChiTiet(noiDung, "Phải đóng sau giảm", MoneyUtils.format(hd.tinhSoTienPhaiDong()));
+        }
+        dongChiTiet(noiDung, "Đã nộp", MoneyUtils.format(hd.getDaNop()));
+        dongChiTiet(noiDung, "Còn nợ", MoneyUtils.format(hd.tinhConNo()));
+        dongChiTiet(noiDung, "Trạng thái", hd.tinhTrangThai().getNhan());
 
-        JButton btnXemCongNo = UITheme.primaryButton("Xem cong no");
+        JButton btnXemCongNo = UITheme.primaryButton("Xem công nợ");
         btnXemCongNo.setAlignmentX(Component.LEFT_ALIGNMENT);
         noiDung.add(Box.createRigidArea(new Dimension(0, 10)));
         noiDung.add(btnXemCongNo);
 
-        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Chi tiet hoa don #" + hd.getMaHoaDon());
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Chi tiết hóa đơn #" + hd.getMaHoaDon());
         dialog.setModal(true);
         dialog.getContentPane().add(noiDung);
         dialog.pack();
@@ -473,16 +514,16 @@ public class HoaDonPanel extends JPanel {
         container.add(dong);
     }
 
-    // ================== GUI NHAC NO QUA EMAIL ==================
+    // ================== GỬI NHẮC NỢ QUA EMAIL ==================
 
     private void guiNhacNoDaChon() {
         HoaDonHocPhi hd = layHoaDonDangChon();
         if (hd == null) {
-            UIUtils.thongBaoLoi(this, "Vui long chon 1 hoa don trong bang de gui nhac no.");
+            UIUtils.thongBaoLoi(this, "Vui lòng chọn 1 hóa đơn trong bảng để gửi nhắc nợ.");
             return;
         }
         if (hd.tinhConNo().compareTo(BigDecimal.ZERO) <= 0) {
-            UIUtils.thongBaoLoi(this, "Hoa don nay da dong du, khong can gui nhac no.");
+            UIUtils.thongBaoLoi(this, "Hóa đơn này đã đóng đủ, không cần gửi nhắc nợ.");
             return;
         }
 
@@ -491,7 +532,7 @@ public class HoaDonPanel extends JPanel {
             protected Boolean doInBackground() throws Exception {
                 SinhVien sv = sinhVienDAO.timTheoMa(hd.getMaSV());
                 if (sv == null || sv.getEmail() == null || sv.getEmail().isBlank()) {
-                    throw new IllegalStateException("Sinh vien chua co email trong he thong.");
+                    throw new IllegalStateException("Sinh viên chưa có email trong hệ thống.");
                 }
                 return EmailUtils.guiNhacHocPhi(sv.getEmail(), hd.getTenSV(), hd.getTenHocKy(),
                         MoneyUtils.format(hd.tinhConNo()));
@@ -502,10 +543,10 @@ public class HoaDonPanel extends JPanel {
                 try {
                     boolean thanhCong = get();
                     if (thanhCong) {
-                        UIUtils.thongBao(HoaDonPanel.this, "Da gui email nhac no cho sinh vien " + hd.getTenSV());
+                        UIUtils.thongBao(HoaDonPanel.this, "Đã gửi email nhắc nợ cho sinh viên " + hd.getTenSV());
                     } else {
                         UIUtils.thongBaoLoi(HoaDonPanel.this,
-                                "Gui email that bai. Kiem tra lai cau hinh mail.host/mail.username/mail.password trong application.properties.");
+                                "Gửi email thất bại. Kiểm tra lại cấu hình mail.host/mail.username/mail.password trong application.properties.");
                     }
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
@@ -516,7 +557,35 @@ public class HoaDonPanel extends JPanel {
         worker.execute();
     }
 
-    // ================== SINH HOA DON ==================
+    // ================== MÃ QR VIETQR CHUYỂN KHOẢN (MỚI) ==================
+
+    private void moQRDaChon() {
+        HoaDonHocPhi hd = layHoaDonDangChon();
+        if (hd == null) {
+            UIUtils.thongBaoLoi(this, "Vui lòng chọn 1 hóa đơn trong bảng để tạo mã QR.");
+            return;
+        }
+        if (hd.tinhConNo().compareTo(BigDecimal.ZERO) <= 0) {
+            UIUtils.thongBaoLoi(this, "Hóa đơn này đã đóng đủ, không cần chuyển khoản thêm.");
+            return;
+        }
+        // choPhepXacNhanThu = true: kế toán được phép bấm xác nhận đã nhận tiền thủ công.
+        new VietQRDialog(SwingUtilities.getWindowAncestor(this), hd, true, this::taiDuLieu)
+                .setVisible(true);
+    }
+
+    // ================== MIỄN GIẢM HỌC PHÍ (MỚI) ==================
+
+    private void moMienGiam() {
+        HoaDonHocPhi hd = layHoaDonDangChon();
+        if (hd == null) {
+            UIUtils.thongBaoLoi(this, "Vui lòng chọn 1 hóa đơn trong bảng để thiết lập miễn giảm.");
+            return;
+        }
+        new MienGiamDialog((Frame) SwingUtilities.getWindowAncestor(this), hd, this::taiDuLieu).setVisible(true);
+    }
+
+    // ================== SINH HÓA ĐƠN ==================
 
     private void moFormSinhHoaDon() {
         SinhHoaDonDialog dialog = new SinhHoaDonDialog(
@@ -537,7 +606,7 @@ public class HoaDonPanel extends JPanel {
                 try {
                     get();
                     taiDuLieu();
-                    UIUtils.thongBao(HoaDonPanel.this, "Da sinh hoa don hoc phi cho sinh vien " + maSV);
+                    UIUtils.thongBao(HoaDonPanel.this, "Đã sinh hóa đơn học phí cho sinh viên " + maSV);
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                     UIUtils.thongBaoLoi(HoaDonPanel.this, cause.getMessage());
@@ -547,12 +616,16 @@ public class HoaDonPanel extends JPanel {
         worker.execute();
     }
 
-    // ================== XOA HOA DON ==================
+    // ================== XÓA HÓA ĐƠN ==================
 
     private void xoaHoaDonDaChon() {
+        if (taiKhoan.getVaiTro() == vn.edu.eaut.qlhocphi.model.VaiTro.KETOAN) {
+            vn.edu.eaut.qlhocphi.gui.common.ErrorScreens.hienTuChoiTruyCap(this, "Xóa hóa đơn học phí");
+            return;
+        }
         int viewRow = table.getSelectedRow();
         if (viewRow < 0) {
-            UIUtils.thongBaoLoi(this, "Vui long chon 1 hoa don trong bang de xoa.");
+            UIUtils.thongBaoLoi(this, "Vui lòng chọn 1 hóa đơn trong bảng để xóa.");
             return;
         }
         int modelRow = table.convertRowIndexToModel(viewRow);
@@ -560,10 +633,10 @@ public class HoaDonPanel extends JPanel {
         String tenSV = String.valueOf(tableModel.getValueAt(modelRow, 2));
         String daNop = String.valueOf(tableModel.getValueAt(modelRow, 6));
 
-        String canhBao = daNop.startsWith("0") ? "" : "\nLuu y: hoa don nay da co phieu thu, xoa se mat luon lich su nop tien.";
+        String canhBao = daNop.startsWith("0") ? "" : "\nLưu ý: hóa đơn này đã có phiếu thu, xóa sẽ mất luôn lịch sử nộp tiền.";
         int xacNhan = JOptionPane.showConfirmDialog(this,
-                "Xoa hoa don #" + maHoaDon + " cua sinh vien " + tenSV + "?" + canhBao,
-                "Xac nhan xoa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                "Xóa hóa đơn #" + maHoaDon + " của sinh viên " + tenSV + "?" + canhBao,
+                "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (xacNhan != JOptionPane.YES_OPTION) return;
 
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
@@ -578,23 +651,23 @@ public class HoaDonPanel extends JPanel {
                 try {
                     get();
                     taiDuLieu();
-                    UIUtils.thongBao(HoaDonPanel.this, "Da xoa hoa don #" + maHoaDon);
+                    UIUtils.thongBao(HoaDonPanel.this, "Đã xóa hóa đơn #" + maHoaDon);
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    UIUtils.thongBaoLoi(HoaDonPanel.this, "Khong the xoa: " + cause.getMessage());
+                    UIUtils.thongBaoLoi(HoaDonPanel.this, "Không thể xóa: " + cause.getMessage());
                 }
             }
         };
         worker.execute();
     }
 
-    // ================== XUAT EXCEL / PDF ==================
+    // ================== XUẤT EXCEL / PDF ==================
 
     private String[] tieuDeCotXuat() {
-        return new String[]{"Ma HD", "Ma SV", "Ho ten", "Hoc ky", "So TC", "So tien", "Da nop", "Con no", "Trang thai"};
+        return new String[]{"Mã HĐ", "Mã SV", "Họ tên", "Học kỳ", "Số TC", "Số tiền", "Đã nộp", "Còn nợ", "Trạng thái"};
     }
 
-    /** Lay du lieu dang HIEN THI TREN BANG (da qua tim kiem/loc) de xuat file. */
+    /** Lấy dữ liệu đang HIỂN THỊ TRÊN BẢNG (đã qua tìm kiếm/lọc) để xuất file. */
     private List<String[]> layDuLieuDangHienThi() {
         List<String[]> rows = new ArrayList<>();
         for (int i = 0; i < table.getRowCount(); i++) {
@@ -610,7 +683,7 @@ public class HoaDonPanel extends JPanel {
 
     private void xuatExcel() {
         if (table.getRowCount() == 0) {
-            UIUtils.thongBaoLoi(this, "Khong co du lieu de xuat.");
+            UIUtils.thongBaoLoi(this, "Không có dữ liệu để xuất.");
             return;
         }
         JFileChooser chooser = new JFileChooser();
@@ -631,10 +704,10 @@ public class HoaDonPanel extends JPanel {
             protected void done() {
                 try {
                     get();
-                    UIUtils.thongBao(HoaDonPanel.this, "Da xuat file Excel:\n" + duongDan);
+                    UIUtils.thongBao(HoaDonPanel.this, "Đã xuất file Excel:\n" + duongDan);
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    UIUtils.thongBaoLoi(HoaDonPanel.this, "Xuat Excel that bai: " + cause.getMessage());
+                    UIUtils.thongBaoLoi(HoaDonPanel.this, "Xuất Excel thất bại: " + cause.getMessage());
                 }
             }
         };
@@ -643,7 +716,7 @@ public class HoaDonPanel extends JPanel {
 
     private void xuatPDF() {
         if (table.getRowCount() == 0) {
-            UIUtils.thongBaoLoi(this, "Khong co du lieu de xuat.");
+            UIUtils.thongBaoLoi(this, "Không có dữ liệu để xuất.");
             return;
         }
         JFileChooser chooser = new JFileChooser();
@@ -656,7 +729,7 @@ public class HoaDonPanel extends JPanel {
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
-                PDFExporter.exportBangDuLieu(duongDan, "DANH SACH HOA DON HOC PHI", tieuDeCotXuat(), layDuLieuDangHienThi());
+                PDFExporter.exportBangDuLieu(duongDan, "DANH SÁCH HÓA ĐƠN HỌC PHÍ", tieuDeCotXuat(), layDuLieuDangHienThi());
                 return null;
             }
 
@@ -664,10 +737,10 @@ public class HoaDonPanel extends JPanel {
             protected void done() {
                 try {
                     get();
-                    UIUtils.thongBao(HoaDonPanel.this, "Da xuat file PDF:\n" + duongDan);
+                    UIUtils.thongBao(HoaDonPanel.this, "Đã xuất file PDF:\n" + duongDan);
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    UIUtils.thongBaoLoi(HoaDonPanel.this, "Xuat PDF that bai: " + cause.getMessage());
+                    UIUtils.thongBaoLoi(HoaDonPanel.this, "Xuất PDF thất bại: " + cause.getMessage());
                 }
             }
         };

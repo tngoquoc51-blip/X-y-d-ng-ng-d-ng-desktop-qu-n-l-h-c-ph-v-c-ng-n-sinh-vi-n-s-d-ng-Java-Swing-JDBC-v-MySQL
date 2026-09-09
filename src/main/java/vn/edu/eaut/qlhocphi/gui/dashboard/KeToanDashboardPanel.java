@@ -2,6 +2,7 @@ package vn.edu.eaut.qlhocphi.gui.dashboard;
 
 import vn.edu.eaut.qlhocphi.bus.KeToanService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
+import vn.edu.eaut.qlhocphi.gui.common.AutoRefreshTimer;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.model.HoaDonHocPhi;
 import vn.edu.eaut.qlhocphi.model.PhieuThu;
@@ -72,6 +73,7 @@ public class KeToanDashboardPanel extends JPanel {
         add(giua, BorderLayout.CENTER);
 
         taiDuLieu();
+        AutoRefreshTimer.gan(this, 20, this::taiDuLieu);
     }
 
     // ================== Banner ==================

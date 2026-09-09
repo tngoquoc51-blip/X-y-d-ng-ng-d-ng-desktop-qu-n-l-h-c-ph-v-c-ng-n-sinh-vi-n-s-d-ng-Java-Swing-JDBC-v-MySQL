@@ -5,6 +5,7 @@ import vn.edu.eaut.qlhocphi.util.EmailUtils;
 
 import java.security.SecureRandom;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,27 +34,29 @@ public class OtpService {
     }
 
     /**
-     * Tim tai khoan sinh vien theo Gmail da lien ket, sinh ma OTP 6 so, gui qua email.
-     * Nem IllegalArgumentException voi thong bao de hieu neu khong hop le - GUI se hien
-     * thong bao nay truc tiep cho nguoi dung.
+     * Tim it nhat 1 tai khoan dang hoat dong theo Gmail da lien ket, sinh ma OTP 6 so,
+     * gui qua email. Nem IllegalArgumentException voi thong bao de hieu neu khong hop
+     * le - GUI se hien thong bao nay truc tiep cho nguoi dung.
      */
     public void guiMaXacNhan(String googleEmail) throws SQLException {
         if (googleEmail == null || googleEmail.isBlank()) {
             throw new IllegalArgumentException("Vui lòng nhập Gmail");
         }
         String emailChuan = googleEmail.trim();
-        TaiKhoan tk = taiKhoanService.timTheoGoogleEmail(emailChuan);
-        if (tk == null) {
+        List<TaiKhoan> danhSach = taiKhoanService.layDanhSachTheoGoogleEmail(emailChuan);
+        if (danhSach.isEmpty()) {
             throw new IllegalArgumentException("Gmail này chưa được Admin liên kết với tài khoản nào.\nVui lòng liên hệ Phòng Kế toán.");
         }
-        if (!tk.isTrangThai()) {
-            throw new IllegalArgumentException("Tài khoản này đã bị khóa. Vui lòng liên hệ Phòng Kế toán.");
+        boolean coTaiKhoanHoatDong = danhSach.stream().anyMatch(TaiKhoan::isTrangThai);
+        if (!coTaiKhoanHoatDong) {
+            throw new IllegalArgumentException("Tài khoản liên kết với Gmail này đã bị khóa. Vui lòng liên hệ Phòng Kế toán.");
         }
 
         String ma = taoMa6So();
         BO_NHO.put(emailChuan.toLowerCase(), new MaOtp(ma, System.currentTimeMillis() + THOI_HAN_MS));
 
-        String noiDung = "Chào " + tk.getHoTen() + ",\n\n"
+        String tenHien = danhSach.get(0).getHoTen();
+        String noiDung = "Chào " + tenHien + ",\n\n"
                 + "Mã xác nhận lấy lại mật khẩu của bạn là: " + ma + "\n"
                 + "Mã có hiệu lực trong 5 phút. Nếu bạn không yêu cầu, vui lòng bỏ qua email này.\n\n"
                 + "Trân trọng,\nHệ thống Quản lý Học phí.";
@@ -66,11 +69,13 @@ public class OtpService {
     }
 
     /**
-     * Kiem tra ma OTP nguoi dung nhap co dung va con han khong. Neu dung: TU DONG dat
-     * 1 mat khau ngau nhien moi cho tai khoan + bat co "bat buoc doi mat khau", roi tra
-     * ve TaiKhoan do de GUI mo tiep dialog doi mat khau chinh thuc.
+     * Kiem tra ma OTP nguoi dung nhap co dung va con han khong. Chi xac minh - KHONG
+     * dong cham gi den mat khau hay tai khoan o day, vi 1 Gmail co the khop NHIEU tai
+     * khoan (xem layTaiKhoanDangHoatDongTheoGoogleEmail ben duoi de lay danh sach roi
+     * quyet dinh o tang GUI: neu chi 1 tai khoan thi tu dong tiep tuc, neu nhieu thi
+     * hoi nguoi dung chon).
      */
-    public TaiKhoan xacNhanMaVaDatLaiMatKhau(String googleEmail, String maNguoiDungNhap) throws SQLException {
+    public void xacNhanMa(String googleEmail, String maNguoiDungNhap) {
         if (googleEmail == null || maNguoiDungNhap == null || maNguoiDungNhap.isBlank()) {
             throw new IllegalArgumentException("Vui lòng nhập mã xác nhận");
         }
@@ -87,14 +92,23 @@ public class OtpService {
             throw new IllegalArgumentException("Mã xác nhận không đúng");
         }
         BO_NHO.remove(key);
+    }
 
-        TaiKhoan tk = taiKhoanService.timTheoGoogleEmail(googleEmail.trim());
-        if (tk == null) {
-            throw new IllegalArgumentException("Không tìm thấy tài khoản tương ứng");
-        }
+    /** Danh sach tai khoan DANG HOAT DONG khop Gmail nay - goi SAU KHI xacNhanMa() thanh
+     *  cong, de tang GUI biet co bao nhieu tai khoan can hoi chon. */
+    public List<TaiKhoan> layTaiKhoanDangHoatDongTheoGoogleEmail(String googleEmail) throws SQLException {
+        return taiKhoanService.layDanhSachTheoGoogleEmail(googleEmail).stream()
+                .filter(TaiKhoan::isTrangThai)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Dat 1 mat khau ngau nhien (tam) cho DUNG 1 tai khoan da duoc chon (sau khi xac
+     * minh ma OTP thanh cong) va BAT co "bat buoc doi mat khau".
+     */
+    public void datLaiMatKhauChoTaiKhoan(TaiKhoan tk) throws SQLException {
         taiKhoanService.datLaiMatKhauNgauNhienVaBatBuocDoi(tk.getMaTK());
         tk.setBatBuocDoiMatKhau(true);
-        return tk;
     }
 
     private String taoMa6So() {

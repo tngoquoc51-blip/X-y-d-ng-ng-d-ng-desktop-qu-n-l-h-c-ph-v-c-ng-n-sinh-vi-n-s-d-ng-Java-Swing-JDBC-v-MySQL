@@ -16,11 +16,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Man hinh sao luu / phuc hoi CSDL - ban "desktop quan ly" day du: banner
- * dong bo mau, the thong tin ket noi CSDL hien tai, bat/tat tu dong sao luu
- * dinh ky (javax.swing.Timer), va lich su thao tac trong phien lam viec.
- * Chi danh cho vai tro ADMIN. Cac thao tac goi tien trinh ngoai (mysqldump/
- * mysql) deu chay qua SwingWorker de khong lam treo giao dien.
+ * Màn hình sao lưu / phục hồi CSDL - bản "desktop quản lý" đầy đủ: banner
+ * đồng bộ màu, thẻ thông tin kết nối CSDL hiện tại, bật/tắt tự động sao lưu
+ * định kỳ (javax.swing.Timer), và lịch sử thao tác trong phiên làm việc.
+ * Chỉ dành cho vai trò ADMIN. Các thao tác gọi tiến trình ngoài (mysqldump/
+ * mysql) đều chạy qua SwingWorker để không làm treo giao diện.
  */
 public class BackupRestorePanel extends JPanel {
     private static final DateTimeFormatter DINH_DANG_TEN_FILE = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
@@ -79,7 +79,7 @@ public class BackupRestorePanel extends JPanel {
         add(scroll, BorderLayout.CENTER);
     }
 
-    /** Bam sat chieu rong khung cuon, khong de trong khoang trang lech ben phai. */
+    /** Bám sát chiều rộng khung cuộn, không để trống khoảng trắng lệch bên phải. */
     private JPanel bocNgoai(JPanel noiDung) {
         JPanel wrap = new KhungCuonToanChieuRong(new BorderLayout());
         wrap.setOpaque(false);
@@ -111,10 +111,10 @@ public class BackupRestorePanel extends JPanel {
         JPanel chuText = new JPanel();
         chuText.setOpaque(false);
         chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
-        JLabel tieuDe = new JLabel("Sao luu & Phuc hoi CSDL");
+        JLabel tieuDe = new JLabel("Sao lưu & Phục hồi CSDL");
         tieuDe.setFont(UITheme.FONT_TITLE);
         tieuDe.setForeground(Color.WHITE);
-        JLabel phu = new JLabel("Bao ve du lieu he thong: sao luu thu cong, tu dong dinh ky va phuc hoi khan cap");
+        JLabel phu = new JLabel("Bảo vệ dữ liệu hệ thống: sao lưu thủ công, tự động định kỳ và phục hồi khẩn cấp");
         phu.setFont(UITheme.FONT_BASE);
         phu.setForeground(new Color(255, 255, 255, 210));
         chuText.add(tieuDe);
@@ -149,18 +149,18 @@ public class BackupRestorePanel extends JPanel {
         return badge;
     }
 
-    // ================== THONG TIN KET NOI CSDL ==================
+    // ================== THÔNG TIN KẾT NỐI CSDL ==================
 
     private JPanel buildThongTinKetNoiRow() {
         JPanel row = new JPanel(new GridLayout(1, 3, 16, 0));
         row.setOpaque(false);
 
         String[] tt = tachThongTinKetNoi();
-        row.add(thongKeCard("May chu CSDL", tt[0] + ":" + tt[1], UITheme.PRIMARY));
-        row.add(thongKeCard("Ten co so du lieu", tt[2], UITheme.TEXT_VIOLET));
+        row.add(thongKeCard("Máy chủ CSDL", tt[0] + ":" + tt[1], UITheme.PRIMARY));
+        row.add(thongKeCard("Tên cơ sở dữ liệu", tt[2], UITheme.TEXT_VIOLET));
 
-        lblTinhTrangTuDong = new JLabel("Dang tat");
-        row.add(thongKeCardVoiNhan("Tu dong sao luu", lblTinhTrangTuDong, UITheme.WARNING));
+        lblTinhTrangTuDong = new JLabel("Đang tắt");
+        row.add(thongKeCardVoiNhan("Tự động sao lưu", lblTinhTrangTuDong, UITheme.WARNING));
 
         return row;
     }
@@ -186,7 +186,7 @@ public class BackupRestorePanel extends JPanel {
         return card;
     }
 
-    /** Tach host/port/database tu chuoi db.url - chi de HIEN THI, khong dung de ket noi (BackupService tu lam viec nay). */
+    /** Tách host/port/database từ chuỗi db.url - chỉ để HIỂN THỊ, không dùng để kết nối (BackupService tự làm việc này). */
     private String[] tachThongTinKetNoi() {
         String url = AppConfig.get("db.url");
         String host = "localhost", port = "3306", db = "qlhocphi";
@@ -202,24 +202,24 @@ public class BackupRestorePanel extends JPanel {
         return new String[]{host, port, db};
     }
 
-    // ================== SAO LUU (thu cong + tu dong dinh ky) ==================
+    // ================== SAO LƯU (thủ công + tự động định kỳ) ==================
 
     private JPanel buildBackupCard() {
         JPanel card = UITheme.card();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
 
-        card.add(UITheme.sectionLabel("Sao luu du lieu"));
+        card.add(UITheme.sectionLabel("Sao lưu dữ liệu"));
         card.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        JLabel mota = new JLabel("<html>Xuat toan bo CSDL ra 1 file .sql. "
-                + "Nen sao luu dinh ky (VD: hang tuan) va luu tru o noi an toan, tach biet may chu.</html>");
+        JLabel mota = new JLabel("<html>Xuất toàn bộ CSDL ra 1 file .sql. "
+                + "Nên sao lưu định kỳ (VD: hàng tuần) và lưu trữ ở nơi an toàn, tách biệt máy chủ.</html>");
         mota.setFont(UITheme.FONT_BASE);
         mota.setForeground(UITheme.TEXT_MUTED);
         mota.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(mota);
         card.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        btnSaoLuu = UITheme.primaryButton("Sao luu ngay");
+        btnSaoLuu = UITheme.primaryButton("Sao lưu ngay");
         btnSaoLuu.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnSaoLuu.addActionListener(e -> thucHienSaoLuu());
         card.add(btnSaoLuu);
@@ -228,20 +228,20 @@ public class BackupRestorePanel extends JPanel {
         card.add(new JSeparator());
         card.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        JLabel tieuDeTuDong = new JLabel("Tu dong sao luu dinh ky (" + CHU_KY_TU_DONG_PHUT + " phut/lan)");
+        JLabel tieuDeTuDong = new JLabel("Tự động sao lưu định kỳ (" + CHU_KY_TU_DONG_PHUT + " phút/lần)");
         tieuDeTuDong.setFont(UITheme.FONT_BOLD);
         tieuDeTuDong.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(tieuDeTuDong);
         card.add(Box.createRigidArea(new Dimension(0, 8)));
 
-        lblThuMucTuDong = new JLabel("Chua chon thu muc luu tu dong");
+        lblThuMucTuDong = new JLabel("Chưa chọn thư mục lưu tự động");
         lblThuMucTuDong.setFont(new Font("Segoe UI", Font.ITALIC, 11));
         lblThuMucTuDong.setForeground(UITheme.TEXT_MUTED);
         lblThuMucTuDong.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(lblThuMucTuDong);
         card.add(Box.createRigidArea(new Dimension(0, 8)));
 
-        btnTuDongSaoLuu = new JToggleButton("Bat tu dong sao luu");
+        btnTuDongSaoLuu = new JToggleButton("Bật tự động sao lưu");
         btnTuDongSaoLuu.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnTuDongSaoLuu.setFont(UITheme.FONT_BASE);
         btnTuDongSaoLuu.addActionListener(e -> chuyenDoiTuDongSaoLuu());
@@ -254,7 +254,7 @@ public class BackupRestorePanel extends JPanel {
         if (btnTuDongSaoLuu.isSelected()) {
             if (thuMucTuDongSaoLuu == null) {
                 JFileChooser chooser = new JFileChooser();
-                chooser.setDialogTitle("Chon thu muc de luu file sao luu tu dong");
+                chooser.setDialogTitle("Chọn thư mục để lưu file sao lưu tự động");
                 chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
                     btnTuDongSaoLuu.setSelected(false);
@@ -262,18 +262,18 @@ public class BackupRestorePanel extends JPanel {
                 }
                 thuMucTuDongSaoLuu = chooser.getSelectedFile();
             }
-            lblThuMucTuDong.setText("Luu vao: " + thuMucTuDongSaoLuu.getAbsolutePath());
-            lblTinhTrangTuDong.setText("Dang bat");
+            lblThuMucTuDong.setText("Lưu vào: " + thuMucTuDongSaoLuu.getAbsolutePath());
+            lblTinhTrangTuDong.setText("Đang bật");
             lblTinhTrangTuDong.setForeground(UITheme.SUCCESS);
-            btnTuDongSaoLuu.setText("Tat tu dong sao luu");
+            btnTuDongSaoLuu.setText("Tắt tự động sao lưu");
 
             timerTuDong = new Timer(CHU_KY_TU_DONG_PHUT * 60 * 1000, e -> thucHienSaoLuuTuDong());
             timerTuDong.start();
         } else {
             if (timerTuDong != null) timerTuDong.stop();
-            lblTinhTrangTuDong.setText("Dang tat");
+            lblTinhTrangTuDong.setText("Đang tắt");
             lblTinhTrangTuDong.setForeground(UITheme.WARNING);
-            btnTuDongSaoLuu.setText("Bat tu dong sao luu");
+            btnTuDongSaoLuu.setText("Bật tự động sao lưu");
         }
     }
 
@@ -292,11 +292,11 @@ public class BackupRestorePanel extends JPanel {
             protected void done() {
                 try {
                     get();
-                    themLichSu("Sao luu tu dong", fileDich.getAbsolutePath(), true);
+                    themLichSu("Sao lưu tự động", fileDich.getAbsolutePath(), true);
                     lblTrangThai.setForeground(UITheme.SUCCESS);
-                    lblTrangThai.setText("Sao luu tu dong thanh cong: " + fileDich.getName());
+                    lblTrangThai.setText("Sao lưu tự động thành công: " + fileDich.getName());
                 } catch (Exception ex) {
-                    themLichSu("Sao luu tu dong", fileDich.getAbsolutePath(), false);
+                    themLichSu("Sao lưu tự động", fileDich.getAbsolutePath(), false);
                     baoLoi(ex);
                 }
             }
@@ -304,24 +304,24 @@ public class BackupRestorePanel extends JPanel {
         worker.execute();
     }
 
-    // ================== PHUC HOI ==================
+    // ================== PHỤC HỒI ==================
 
     private JPanel buildRestoreCard() {
         JPanel card = UITheme.card();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
 
-        card.add(UITheme.sectionLabel("Phuc hoi du lieu"));
+        card.add(UITheme.sectionLabel("Phục hồi dữ liệu"));
         card.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        JLabel mota = new JLabel("<html><b>Canh bao:</b> phuc hoi se GHI DE toan bo du lieu hien tai "
-                + "bang noi dung trong file .sql duoc chon. Hay chac chan ban da sao luu du lieu hien tai truoc.</html>");
+        JLabel mota = new JLabel("<html><b>Cảnh báo:</b> Phục hồi sẽ GHI ĐÈ toàn bộ dữ liệu hiện tại "
+                + "bằng nội dung trong file .sql được chọn. Hãy chắc chắn bạn đã sao lưu dữ liệu hiện tại trước.</html>");
         mota.setFont(UITheme.FONT_BASE);
         mota.setForeground(UITheme.DANGER);
         mota.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(mota);
         card.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        btnPhucHoi = UITheme.dangerButton("Chon file va phuc hoi");
+        btnPhucHoi = UITheme.dangerButton("Chọn file và phục hồi");
         btnPhucHoi.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnPhucHoi.addActionListener(e -> thucHienPhucHoi());
         card.add(btnPhucHoi);
@@ -329,12 +329,12 @@ public class BackupRestorePanel extends JPanel {
         return card;
     }
 
-    // ================== LICH SU THAO TAC (trong phien lam viec) ==================
+    // ================== LỊCH SỬ THAO TÁC (trong phiên làm việc) ==================
 
     private JPanel buildLichSuCard() {
         JPanel card = UITheme.card();
         card.setLayout(new BorderLayout(0, 10));
-        card.add(UITheme.sectionLabel("Lich su thao tac (trong phien lam viec nay)"), BorderLayout.NORTH);
+        card.add(UITheme.sectionLabel("Lịch sử thao tác (trong phiên làm việc này)"), BorderLayout.NORTH);
 
         khoiLichSu = new JPanel();
         khoiLichSu.setOpaque(false);
@@ -346,7 +346,7 @@ public class BackupRestorePanel extends JPanel {
     }
 
     private JLabel dongTrongLichSu() {
-        JLabel trong = new JLabel("Chua co thao tac nao trong phien lam viec nay");
+        JLabel trong = new JLabel("Chưa có thao tác nào trong phiên làm việc này");
         trong.setFont(UITheme.FONT_BASE);
         trong.setForeground(UITheme.TEXT_MUTED);
         return trong;
@@ -354,7 +354,7 @@ public class BackupRestorePanel extends JPanel {
 
     private void themLichSu(String loai, String duongDan, boolean thanhCong) {
         lichSuThaoTac.add(0, new String[]{loai, LocalDateTime.now().format(DINH_DANG_HIEN_THI), duongDan,
-                thanhCong ? "Thanh cong" : "That bai"});
+                thanhCong ? "Thành công" : "Thất bại"});
 
         khoiLichSu.removeAll();
         for (String[] dong : lichSuThaoTac) {
@@ -384,7 +384,7 @@ public class BackupRestorePanel extends JPanel {
         trai.add(lblDuongDan);
         row.add(trai, BorderLayout.CENTER);
 
-        boolean ok = "Thanh cong".equals(trangThai);
+        boolean ok = "Thành công".equals(trangThai) || "Thanh cong".equals(trangThai);
         JLabel pill = UITheme.pill(trangThai, ok ? UITheme.TINT_GREEN : new Color(0xFC, 0xE4, 0xE4),
                 ok ? UITheme.TEXT_GREEN : UITheme.DANGER);
         JPanel phaiWrap = new JPanel(new GridBagLayout());
@@ -395,7 +395,7 @@ public class BackupRestorePanel extends JPanel {
         return row;
     }
 
-    // ================== THUC HIEN SAO LUU / PHUC HOI (thu cong) ==================
+    // ================== THỰC HIỆN SAO LƯU / PHỤC HỒI (thủ công) ==================
 
     private void thucHienSaoLuu() {
         JFileChooser chooser = new JFileChooser();
@@ -405,7 +405,7 @@ public class BackupRestorePanel extends JPanel {
         if (ketQua != JFileChooser.APPROVE_OPTION) return;
         File fileDich = chooser.getSelectedFile();
 
-        capNhatTrangThaiDangXuLy("Dang sao luu du lieu...");
+        capNhatTrangThaiDangXuLy("Đang sao lưu dữ liệu...");
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
@@ -418,11 +418,11 @@ public class BackupRestorePanel extends JPanel {
                 enableButtons(true);
                 try {
                     get();
-                    themLichSu("Sao luu thu cong", fileDich.getAbsolutePath(), true);
+                    themLichSu("Sao lưu thủ công", fileDich.getAbsolutePath(), true);
                     lblTrangThai.setForeground(UITheme.SUCCESS);
-                    lblTrangThai.setText("Sao luu thanh cong: " + fileDich.getAbsolutePath());
+                    lblTrangThai.setText("Sao lưu thành công: " + fileDich.getAbsolutePath());
                 } catch (Exception ex) {
-                    themLichSu("Sao luu thu cong", fileDich.getAbsolutePath(), false);
+                    themLichSu("Sao lưu thủ công", fileDich.getAbsolutePath(), false);
                     baoLoi(ex);
                 }
             }
@@ -432,17 +432,17 @@ public class BackupRestorePanel extends JPanel {
 
     private void thucHienPhucHoi() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("SQL files (*.sql)", "sql"));
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Tập tin SQL (*.sql)", "sql"));
         int ketQua = chooser.showOpenDialog(this);
         if (ketQua != JFileChooser.APPROVE_OPTION) return;
         File fileNguon = chooser.getSelectedFile();
 
         int xacNhan = JOptionPane.showConfirmDialog(this,
-                "Ban chac chan muon GHI DE toan bo du lieu hien tai bang file:\n" + fileNguon.getName() + " ?",
-                "Xac nhan phuc hoi", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                "Bạn chắc chắn muốn GHI ĐÈ toàn bộ dữ liệu hiện tại bằng file:\n" + fileNguon.getName() + " ?",
+                "Xác nhận phục hồi", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (xacNhan != JOptionPane.YES_OPTION) return;
 
-        capNhatTrangThaiDangXuLy("Dang phuc hoi du lieu...");
+        capNhatTrangThaiDangXuLy("Đang phục hồi dữ liệu...");
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
@@ -455,12 +455,12 @@ public class BackupRestorePanel extends JPanel {
                 enableButtons(true);
                 try {
                     get();
-                    themLichSu("Phuc hoi du lieu", fileNguon.getAbsolutePath(), true);
+                    themLichSu("Phục hồi dữ liệu", fileNguon.getAbsolutePath(), true);
                     lblTrangThai.setForeground(UITheme.SUCCESS);
-                    lblTrangThai.setText("Phuc hoi thanh cong tu file: " + fileNguon.getName()
-                            + ". Vui long khoi dong lai ung dung de dam bao du lieu duoc lam moi.");
+                    lblTrangThai.setText("Phục hồi thành công từ file: " + fileNguon.getName()
+                            + ". Vui lòng khởi động lại ứng dụng để đảm bảo dữ liệu được làm mới.");
                 } catch (Exception ex) {
-                    themLichSu("Phuc hoi du lieu", fileNguon.getAbsolutePath(), false);
+                    themLichSu("Phục hồi dữ liệu", fileNguon.getAbsolutePath(), false);
                     baoLoi(ex);
                 }
             }
@@ -484,8 +484,8 @@ public class BackupRestorePanel extends JPanel {
         lblTrangThai.setForeground(UITheme.DANGER);
         String msg = cause.getMessage() != null ? cause.getMessage() : cause.toString();
         if (msg.contains("Cannot run program") || msg.contains("error=2")) {
-            msg = "Khong tim thay lenh mysqldump/mysql. Vui long cai MySQL client va them vao PATH he thong.";
+            msg = "Không tìm thấy lệnh mysqldump/mysql. Vui lòng cài MySQL client và thêm vào PATH hệ thống.";
         }
-        lblTrangThai.setText("Loi: " + msg);
+        lblTrangThai.setText("Lỗi: " + msg);
     }
 }

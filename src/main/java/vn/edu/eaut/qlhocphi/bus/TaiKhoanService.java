@@ -3,7 +3,6 @@ package vn.edu.eaut.qlhocphi.bus;
 import vn.edu.eaut.qlhocphi.dal.TaiKhoanDAO;
 import vn.edu.eaut.qlhocphi.model.TaiKhoan;
 import vn.edu.eaut.qlhocphi.model.VaiTro;
-import vn.edu.eaut.qlhocphi.model.SinhVien;
 import vn.edu.eaut.qlhocphi.util.PasswordUtils;
 
 import java.security.SecureRandom;
@@ -16,7 +15,6 @@ import java.util.List;
  */
 public class TaiKhoanService {
     private final TaiKhoanDAO taiKhoanDAO = new TaiKhoanDAO();
-    private final SinhVienService sinhVienService = new SinhVienService();
     private static final SecureRandom RANDOM = new SecureRandom();
 
     public List<TaiKhoan> layTatCa() throws SQLException {
@@ -44,9 +42,6 @@ public class TaiKhoanService {
         if (vaiTro == VaiTro.SINHVIEN && (maSV == null || maSV.isBlank())) {
             throw new IllegalArgumentException("Tai khoan vai tro SINHVIEN phai gan Ma sinh vien");
         }
-        if (googleEmail != null && !googleEmail.isBlank() && taiKhoanDAO.timTheoGoogleEmail(googleEmail.trim()) != null) {
-            throw new IllegalArgumentException("Gmail nay da duoc gan cho tai khoan khac");
-        }
 
         TaiKhoan tk = new TaiKhoan();
         tk.setTenDangNhap(tenDangNhap.trim());
@@ -69,12 +64,6 @@ public class TaiKhoanService {
             throw new IllegalArgumentException("Ho ten khong duoc de trong");
         }
         String googleEmailChuan = googleEmail == null || googleEmail.isBlank() ? null : googleEmail.trim();
-        if (googleEmailChuan != null) {
-            TaiKhoan trung = taiKhoanDAO.timTheoGoogleEmail(googleEmailChuan);
-            if (trung != null && trung.getMaTK() != maTK) {
-                throw new IllegalArgumentException("Gmail nay da duoc gan cho tai khoan khac");
-            }
-        }
         TaiKhoan tk = new TaiKhoan();
         tk.setMaTK(maTK);
         tk.setHoTen(hoTen.trim());
@@ -83,10 +72,6 @@ public class TaiKhoanService {
         tk.setGoogleEmail(googleEmailChuan);
         tk.setTrangThai(trangThai);
         taiKhoanDAO.capNhat(tk);
-
-        if (vaiTro == VaiTro.SINHVIEN && maSV != null && !maSV.isBlank()) {
-            dongBoTenSinhVien(maSV, hoTen);
-        }
     }
 
     public void doiMatKhau(int maTK, String matKhauMoi) throws SQLException {
@@ -114,19 +99,17 @@ public class TaiKhoanService {
             throw new IllegalArgumentException("Khong the tu xoa tai khoan dang dang nhap");
         }
         taiKhoanDAO.xoa(maTK);
+        new NhatKyHeThongService().ghi("XOA", "Tai khoan #" + maTK, "Da xoa vinh vien 1 tai khoan he thong");
     }
 
-    /** Admin gan/go Gmail dung de dang nhap - khoi phuc mat khau qua Google cho 1 tai khoan. */
+    /** Admin gan/go Gmail dung de dang nhap - khoi phuc mat khau qua Google cho 1 tai khoan.
+     *  1 Gmail duoc phep gan cho NHIEU tai khoan khac nhau (vi du 1 nguoi vua la Sinh vien
+     *  vua la Ke toan, dung chung Gmail ca nhan) - luc dang nhap/khoi phuc, neu 1 Gmail
+     *  khop nhieu tai khoan, ung dung se hoi nguoi dung chon dung tai khoan can dung. */
     public void ganTaiKhoanGoogle(int maTK, String googleEmail) throws SQLException {
         String chuan = googleEmail == null || googleEmail.isBlank() ? null : googleEmail.trim();
-        if (chuan != null) {
-            if (!chuan.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-                throw new IllegalArgumentException("Gmail khong hop le");
-            }
-            TaiKhoan trung = taiKhoanDAO.timTheoGoogleEmail(chuan);
-            if (trung != null && trung.getMaTK() != maTK) {
-                throw new IllegalArgumentException("Gmail nay da duoc gan cho tai khoan khac");
-            }
+        if (chuan != null && !chuan.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            throw new IllegalArgumentException("Gmail khong hop le");
         }
         taiKhoanDAO.ganGoogleEmail(maTK, chuan);
     }
@@ -139,6 +122,13 @@ public class TaiKhoanService {
     public TaiKhoan timTheoGoogleEmail(String googleEmail) throws SQLException {
         if (googleEmail == null || googleEmail.isBlank()) return null;
         return taiKhoanDAO.timTheoGoogleEmail(googleEmail.trim());
+    }
+
+    /** Tra ve TAT CA tai khoan dang dung chung Gmail nay - dung khi 1 Gmail co the
+     *  khop nhieu tai khoan (Sinh vien + Ke toan dung chung Gmail ca nhan chang han). */
+    public java.util.List<TaiKhoan> layDanhSachTheoGoogleEmail(String googleEmail) throws SQLException {
+        if (googleEmail == null || googleEmail.isBlank()) return java.util.Collections.emptyList();
+        return taiKhoanDAO.layDanhSachTheoGoogleEmail(googleEmail.trim());
     }
 
     /**
@@ -158,19 +148,5 @@ public class TaiKhoanService {
             sb.append(bang.charAt(RANDOM.nextInt(bang.length())));
         }
         return sb.toString();
-    }
-
-    /**
-     * Dong bo lai Ho ten trong bang SinhVien khi Admin sua ten cho 1 tai khoan co lien ket Ma SV.
-     * Neu khong lam viec nay, ten se lech nhau giua header (lay tu TaiKhoan.HoTen) va banner
-     * Tong quan cua sinh vien (lay tu SinhVien.HoTen) - dung 2 nguon du lieu doc lap. Chi doi
-     * dung truong Ho ten, giu nguyen moi du lieu khac (Lop, Khoa, Email, SDT, Trang thai...).
-     */
-    private void dongBoTenSinhVien(String maSV, String hoTenMoi) throws SQLException {
-        SinhVien sv = sinhVienService.timTheoMa(maSV);
-        if (sv == null) return;
-        if (hoTenMoi.trim().equals(sv.getHoTen())) return;
-        sv.setHoTen(hoTenMoi.trim());
-        sinhVienService.capNhat(sv);
     }
 }

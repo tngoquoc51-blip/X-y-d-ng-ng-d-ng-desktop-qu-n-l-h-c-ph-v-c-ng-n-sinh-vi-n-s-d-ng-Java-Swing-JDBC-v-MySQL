@@ -60,6 +60,22 @@ public class BaoCaoService {
     }
 
     /** Top N sinh vien con no nhieu nhat, sap xep giam dan theo so tien con no. */
+    /** Tong tien da thu theo tung hinh thuc thanh toan (Tien mat, Chuyen khoan, Online, Vi dien tu...). */
+    public Map<String, BigDecimal> thongKeThuTheoHinhThuc() throws SQLException {
+        List<HoaDonHocPhi> dsHoaDon = hoaDonDAO.layTatCa();
+        Map<String, BigDecimal> ketQua = new LinkedHashMap<>();
+
+        for (HoaDonHocPhi hd : dsHoaDon) {
+            List<PhieuThu> dsPhieuThu = phieuThuDAO.layTheoHoaDon(hd.getMaHoaDon());
+            for (PhieuThu pt : dsPhieuThu) {
+                String hinhThuc = pt.getHinhThuc() != null ? pt.getHinhThuc() : "KHAC";
+                ketQua.merge(hinhThuc, pt.getSoTienNop(), BigDecimal::add);
+            }
+        }
+        return ketQua;
+    }
+
+    /** Top N sinh vien con no nhieu nhat, sap xep giam dan theo so tien con no. */
     public List<HoaDonHocPhi> topSinhVienConNoNhieuNhat(int soLuong) throws SQLException {
         return hoaDonDAO.layTatCa().stream()
                 .filter(hd -> hd.tinhConNo().compareTo(BigDecimal.ZERO) > 0)

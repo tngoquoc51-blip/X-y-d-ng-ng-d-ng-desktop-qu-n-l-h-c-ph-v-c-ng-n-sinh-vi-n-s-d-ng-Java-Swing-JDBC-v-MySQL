@@ -38,6 +38,7 @@ public class SinhVienService {
 
     public void xoa(String maSV) throws SQLException {
         sinhVienDAO.xoa(maSV);
+        new NhatKyHeThongService().ghi("XOA", "Sinh vien " + maSV, "Da xoa ho so sinh vien");
     }
 
     private void validate(SinhVien sv) {

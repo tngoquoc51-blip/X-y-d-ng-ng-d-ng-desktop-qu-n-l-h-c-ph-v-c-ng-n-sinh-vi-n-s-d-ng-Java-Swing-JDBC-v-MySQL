@@ -32,6 +32,8 @@ public class ThanhToanService {
         pt.setHinhThuc(hinhThuc);
         pt.setNguoiThu(nguoiThu);
         phieuThuDAO.them(pt);
+        new vn.edu.eaut.qlhocphi.bus.NhatKyHeThongService().ghi("THANH_TOAN", "Hoa don #" + maHoaDon,
+                "Thu " + soTien + " qua " + hinhThuc);
     }
 
     /**

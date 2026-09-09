@@ -67,10 +67,24 @@ public class HocPhiService {
     /** Sinh 1 hoa don hoc phi cho 1 sinh vien trong 1 hoc ky, tinh theo so tin chi. */
     public int sinhHoaDon(String maSV, int maHocKy, int soTinChi, LocalDate hanThanhToan) throws SQLException {
         if (soTinChi <= 0) throw new IllegalArgumentException("So tin chi phai lon hon 0");
+        if (soTinChi > 60) {
+            // Mot hoc ky thong thuong khong qua 60 tin chi - chan som de tranh go nham
+            // so qua lon gay tran cot SoTien (decimal(12,0)) ben MySQL.
+            throw new IllegalArgumentException("So tin chi khong hop ly (toi da 60/hoc ky). Vui long kiem tra lai.");
+        }
         HocKy hk = hocKyDAO.timTheoMa(maHocKy);
         if (hk == null) throw new IllegalArgumentException("Hoc ky khong ton tai");
 
         BigDecimal soTien = hk.getDonGiaTinChi().multiply(BigDecimal.valueOf(soTinChi));
+
+        // Chan tran so truoc khi ghi xuong CSDL - cot SoTien la decimal(12,0),
+        // toi da 999,999,999,999. Neu vuot, bao loi tieng Viet de hieu thay vi
+        // de MySQL nem loi "Data truncation" kho hieu.
+        BigDecimal gioiHan = new BigDecimal("999999999999");
+        if (soTien.compareTo(gioiHan) > 0) {
+            throw new IllegalArgumentException(
+                    "So tien tinh ra qua lon (" + soTien + "). Vui long kiem tra lai don gia hoc ky va so tin chi.");
+        }
 
         HoaDonHocPhi hd = new HoaDonHocPhi();
         hd.setMaSV(maSV);

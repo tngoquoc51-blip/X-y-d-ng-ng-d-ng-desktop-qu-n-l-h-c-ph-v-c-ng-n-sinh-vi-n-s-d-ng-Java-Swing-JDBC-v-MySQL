@@ -24,8 +24,17 @@ public class GatewayCallbackServer {
     private static HttpServer server;
     private static Consumer<Map<String, String>> vnpayListener;
     private static Consumer<Map<String, String>> momoListener;
+    private static javax.swing.Timer lichTatServer;
 
     public static synchronized void start() throws IOException {
+        // Neu truoc do co 1 giao dich khac da hen gio tat server (nhung chua toi luc),
+        // huy lich do di - server sap/dang duoc 1 giao dich MOI dung tiep, khong duoc
+        // tat giua chung. Neu khong huy, giao dich cu se vo tinh tat mat server ma
+        // giao dich moi nay dang can, gay loi 502 Bad Gateway ben phia ngrok.
+        if (lichTatServer != null) {
+            lichTatServer.stop();
+            lichTatServer = null;
+        }
         if (server != null) return;
         int port = Integer.parseInt(AppConfig.get("gateway.callback.port", "80"));
         server = HttpServer.create(new InetSocketAddress(port), 0);
@@ -38,10 +47,29 @@ public class GatewayCallbackServer {
     }
 
     public static synchronized void stop() {
+        if (lichTatServer != null) {
+            lichTatServer.stop();
+            lichTatServer = null;
+        }
         if (server != null) {
             server.stop(0);
             server = null;
         }
+    }
+
+    /**
+     * Hen tat server sau {@code doTreMs} mili-giay thay vi tat ngay - de cong thanh toan
+     * (dac biet MoMo) kip goi het IPN (server-to-server) LAN redirect trinh duyet gan
+     * nhu dong thoi truoc khi server dong lai. Neu co 1 giao dich MOI goi start() truoc
+     * khi het gio, lich tat nay se tu dong bi huy (xem start()).
+     */
+    public static synchronized void henTat(int doTreMs) {
+        if (lichTatServer != null) {
+            lichTatServer.stop();
+        }
+        lichTatServer = new javax.swing.Timer(doTreMs, e -> stop());
+        lichTatServer.setRepeats(false);
+        lichTatServer.start();
     }
 
     public static void dangKyVNPay(Consumer<Map<String, String>> listener) {
@@ -71,10 +99,6 @@ public class GatewayCallbackServer {
 
         Consumer<Map<String, String>> listener = supplier.get();
         if (listener != null && !params.isEmpty()) {
-            // Bo qua cac request khong co tham so huu ich (vd: IPN goi bang POST voi
-            // du lieu nam trong JSON body ma ham nay chua doc - neu coi map rong la
-            // "that bai" se bao sai ket qua truoc khi request GET (redirect trinh
-            // duyet, co day du resultCode) kip toi.
             listener.accept(params);
         }
     }

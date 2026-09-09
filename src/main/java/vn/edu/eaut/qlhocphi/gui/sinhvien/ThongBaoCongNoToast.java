@@ -25,7 +25,31 @@ public class ThongBaoCongNoToast extends JWindow {
     private final Timer timerDemNguoc;
     private float phanTramConLai = 1f;
 
+    /**
+     * Diem vao DUY NHAT nen dung thay vi goi truc tiep constructor. Chi hien
+     * toast neu co it nhat 1 hoa don DA DEN HAN (hom nay >= Han thanh toan) ma
+     * van con no. Hoa don chua den han hoac da dong du se KHONG lam hien toast.
+     */
+    public static void hienNeuCanThiet(Window chaMe, String hoTenSV,
+                                       java.util.List<vn.edu.eaut.qlhocphi.model.HoaDonHocPhi> danhSachHoaDon) {
+        if (danhSachHoaDon == null || danhSachHoaDon.isEmpty()) return;
+        java.time.LocalDate homNay = java.time.LocalDate.now();
+
+        java.util.List<vn.edu.eaut.qlhocphi.model.HoaDonHocPhi> denHanChuaDong = danhSachHoaDon.stream()
+                .filter(hd -> hd.tinhConNo().compareTo(BigDecimal.ZERO) > 0)
+                .filter(hd -> hd.getHanThanhToan() != null && !hd.getHanThanhToan().isAfter(homNay))
+                .collect(java.util.stream.Collectors.toList());
+
+        if (denHanChuaDong.isEmpty()) return;
+
+        BigDecimal tongConNo = denHanChuaDong.stream()
+                .map(vn.edu.eaut.qlhocphi.model.HoaDonHocPhi::tinhConNo)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        new ThongBaoCongNoToast(chaMe, hoTenSV, tongConNo, denHanChuaDong.size()).hienThi();
+    }
     public ThongBaoCongNoToast(Window chaMe, String hoTenSV, BigDecimal tongConNo, int soHoaDonChuaDong) {
+
         super(chaMe);
         setSize(RONG, CAO);
         capNhatViTri(chaMe);
