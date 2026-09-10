@@ -598,9 +598,12 @@ public class HocKyPanel extends JPanel {
                         // MOI: hoc ky vua tao xong -> tu dong mo ngay dialog gan hang loat
                         // theo Khoa/Lop, khong bat nguoi dung phai quay lai chon combo nua.
                         taiDuLieu(() -> {
+                            // ✅ SUA: lay theo Ma HK LON NHAT (auto-increment) thay vi so khop chuoi
+                            // ten/nam hoc - cach cu de bi "false negative" neu chuoi luu trong DB
+                            // lech 1 ky tu khoang trang so voi chuoi go tren form, khien hkVuaTao = null
+                            // va dialog dang ky hang loat khong bao gio hien len.
                             HocKy hkVuaTao = danhSachHienTai.stream()
-                                    .filter(h -> h.getTenHocKy().equals(ten) && h.getNamHoc().equals(namHoc))
-                                    .reduce((truoc, sau) -> sau) // lay ban ghi trung ten/nam moi nhat (Ma lon nhat) = vua tao
+                                    .max(java.util.Comparator.comparingInt(HocKy::getMaHocKy))
                                     .orElse(null);
                             UIUtils.thongBao(HocKyPanel.this, "Đã thêm học kỳ mới");
                             if (hkVuaTao != null) {
@@ -726,6 +729,13 @@ public class HocKyPanel extends JPanel {
      *  mot, Admin chi can chon Khoa (hoac "Tat ca") + Lop (hoac "Tat ca") la tu dong sinh
      *  hoa don cho MOI sinh vien khop dieu kien do trong 1 lan bam. */
     private void moDangKyChoHocKy(HocKy hk) {
+        moDangKyChoHocKy(hk, false); // mac dinh giu nguyen hanh vi cu: mo tab "1 Ma sinh vien"
+    }
+
+    /** macDinhHangLoat = true: mo san tab "Hang loat theo Khoa/Lop" thay vi "1 Ma sinh vien" -
+     *  dung khi vua tao xong 1 hoc ky moi (xem luuHocKy()), giup Admin gan ngay cho ca Khoa/Lop
+     *  ma khong phai tu tay chuyen tab. */
+    private void moDangKyChoHocKy(HocKy hk, boolean macDinhHangLoat) {
         LoaiHocKy loai = xacDinhLoai(hk);
 
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), loai.tieuDe, Dialog.ModalityType.APPLICATION_MODAL);
