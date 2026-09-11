@@ -23,9 +23,9 @@ public class TaiKhoanFormDialog extends JDialog {
         void onSua(int maTK, String hoTen, VaiTro vaiTro, String maSV, String googleEmail, boolean trangThai);
     }
 
-    private VaiTro vaiTroDangChon = VaiTro.SINHVIEN;
-    private JPanel[] chipVaiTro = new JPanel[3];
-    private JLabel[] chuChipVaiTro = new JLabel[3];
+    private VaiTro vaiTroDangChon = VaiTro.PHONGDAOTAO;
+    private JPanel[] chipVaiTro = new JPanel[4];
+    private JLabel[] chuChipVaiTro = new JLabel[4];
     private JPanel oMaSV;
     private boolean matKhauDangHien = false;
     private JPasswordField txtMatKhau;
@@ -35,7 +35,7 @@ public class TaiKhoanFormDialog extends JDialog {
         super(owner, "", true);
         boolean laSua = suaTK != null;
         setUndecorated(false);
-        setSize(460, laSua ? 560 : 620);
+        setSize(480, laSua ? 620 : 680);
         setLocationRelativeTo(owner);
         setLayout(new BorderLayout());
         getContentPane().setBackground(Color.WHITE);
@@ -91,19 +91,20 @@ public class TaiKhoanFormDialog extends JDialog {
         }
         themDong(form, "Họ tên", txtHoTen);
 
-        // ===== Vai tro: 3 "chip" mau rieng biet, thay cho combo box =====
+        // ===== Vai tro: 4 "chip" mau rieng biet, thay cho combo box =====
         JLabel lblVaiTro = nhanForm("Vai trò");
         lblVaiTro.setAlignmentX(Component.LEFT_ALIGNMENT);
         form.add(lblVaiTro);
         form.add(Box.createRigidArea(new Dimension(0, 6)));
 
-        JPanel hangChip = new JPanel(new GridLayout(1, 3, 8, 0));
+        JPanel hangChip = new JPanel(new GridLayout(2, 2, 8, 8));
         hangChip.setOpaque(false);
         hangChip.setAlignmentX(Component.LEFT_ALIGNMENT);
-        hangChip.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        hangChip.add(taoChipVaiTro(0, "Quản trị", VaiTro.ADMIN, UITheme.TEXT_VIOLET));
-        hangChip.add(taoChipVaiTro(1, "Kế toán", VaiTro.KETOAN, UITheme.WARNING));
-        hangChip.add(taoChipVaiTro(2, "Sinh viên", VaiTro.SINHVIEN, UITheme.TEXT_GREEN));
+        hangChip.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+        hangChip.add(taoChipVaiTro(0, "Admin Hệ Thống", VaiTro.ADMIN, UITheme.TEXT_VIOLET));
+        hangChip.add(taoChipVaiTro(1, "Phòng Đào Tạo", VaiTro.PHONGDAOTAO, UITheme.PRIMARY));
+        hangChip.add(taoChipVaiTro(2, "Kế Toán", VaiTro.KETOAN, UITheme.WARNING));
+        hangChip.add(taoChipVaiTro(3, "Sinh Viên", VaiTro.SINHVIEN, UITheme.TEXT_GREEN));
         form.add(hangChip);
         form.add(Box.createRigidArea(new Dimension(0, 14)));
         capNhatChipVaiTro();
@@ -234,8 +235,8 @@ public class TaiKhoanFormDialog extends JDialog {
     }
 
     private void capNhatChipVaiTro() {
-        VaiTro[] thuTu = {VaiTro.ADMIN, VaiTro.KETOAN, VaiTro.SINHVIEN};
-        for (int i = 0; i < 3; i++) {
+        VaiTro[] thuTu = {VaiTro.ADMIN, VaiTro.PHONGDAOTAO, VaiTro.KETOAN, VaiTro.SINHVIEN};
+        for (int i = 0; i < 4; i++) {
             boolean dangChon = vaiTroDangChon == thuTu[i];
             chuChipVaiTro[i].setForeground(dangChon ? Color.WHITE : UITheme.TEXT_MUTED);
             chipVaiTro[i].repaint();

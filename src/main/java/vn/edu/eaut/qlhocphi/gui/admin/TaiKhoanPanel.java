@@ -38,7 +38,7 @@ public class TaiKhoanPanel extends JPanel {
     private JLabel lblSoLuong;
     private JLabel lblDaChon;
 
-    private JLabel lblTongTK, lblSoAdmin, lblSoKeToan, lblSoSinhVien;
+    private JLabel lblTongTK, lblSoAdmin, lblSoPdt, lblSoKeToan, lblSoSinhVien;
 
     public TaiKhoanPanel(TaiKhoan taiKhoanDangDangNhap) {
         this.taiKhoanDangDangNhap = taiKhoanDangDangNhap;
@@ -134,10 +134,12 @@ public class TaiKhoanPanel extends JPanel {
         row.setOpaque(false);
         lblTongTK = new JLabel("0");
         lblSoAdmin = new JLabel("0");
+        lblSoPdt = new JLabel("0");
         lblSoKeToan = new JLabel("0");
         lblSoSinhVien = new JLabel("0");
         row.add(thongKeCard("Tổng Tài Khoản", lblTongTK, UITheme.PRIMARY));
-        row.add(thongKeCard("Quản Trị Viên", lblSoAdmin, UITheme.TEXT_VIOLET));
+        row.add(thongKeCard("Admin Hệ Thống", lblSoAdmin, UITheme.TEXT_VIOLET));
+        row.add(thongKeCard("Phòng Đào Tạo", lblSoPdt, UITheme.PRIMARY));
         row.add(thongKeCard("Kế Toán", lblSoKeToan, UITheme.WARNING));
         row.add(thongKeCard("Sinh Viên", lblSoSinhVien, UITheme.SUCCESS));
         return row;
@@ -187,7 +189,7 @@ public class TaiKhoanPanel extends JPanel {
         gbc.gridx = col++;
         toolbar.add(UIUtils.formLabel("Vai trò:"), gbc);
 
-        cboVaiTro = new JComboBox<>(new String[]{"Tất cả vai trò", "ADMIN", "KETOAN", "SINHVIEN"});
+        cboVaiTro = new JComboBox<>(new String[]{"Tất cả vai trò", "ADMIN", "PHONGDAOTAO", "KETOAN", "SINHVIEN"});
         cboVaiTro.setFont(UITheme.FONT_BASE);
         cboVaiTro.addActionListener(e -> apDungBoLoc());
         gbc.gridx = col++;
@@ -297,7 +299,9 @@ public class TaiKhoanPanel extends JPanel {
                 String nhan;
                 Color bg, fg;
                 if (vt == VaiTro.ADMIN) {
-                    nhan = "Quản trị viên"; bg = UITheme.TINT_VIOLET; fg = UITheme.TEXT_VIOLET;
+                    nhan = "Admin Hệ Thống"; bg = UITheme.TINT_VIOLET; fg = UITheme.TEXT_VIOLET;
+                } else if (vt == VaiTro.PHONGDAOTAO) {
+                    nhan = "Phòng Đào Tạo"; bg = new Color(0xE0, 0xF2, 0xFE); fg = UITheme.PRIMARY;
                 } else if (vt == VaiTro.KETOAN) {
                     nhan = "Kế toán"; bg = new Color(0xFD, 0xF3, 0xDA); fg = UITheme.WARNING;
                 } else {
@@ -374,7 +378,7 @@ public class TaiKhoanPanel extends JPanel {
                 try {
                     List<TaiKhoan> list = get();
                     tableModel.setRowCount(0);
-                    int soAdmin = 0, soKeToan = 0, soSinhVien = 0;
+                    int soAdmin = 0, soPdt = 0, soKeToan = 0, soSinhVien = 0;
                     for (TaiKhoan tk : list) {
                         tableModel.addRow(new Object[]{
                                 tk.getMaTK(), tk.getTenDangNhap(), tk.getHoTen(), tk.getVaiTro(),
@@ -383,11 +387,13 @@ public class TaiKhoanPanel extends JPanel {
                                 tk.isTrangThai() ? "Hoạt động" : "Đã khóa"
                         });
                         if (tk.getVaiTro() == VaiTro.ADMIN) soAdmin++;
+                        else if (tk.getVaiTro() == VaiTro.PHONGDAOTAO) soPdt++;
                         else if (tk.getVaiTro() == VaiTro.KETOAN) soKeToan++;
                         else soSinhVien++;
                     }
                     lblTongTK.setText(String.valueOf(list.size()));
                     lblSoAdmin.setText(String.valueOf(soAdmin));
+                    lblSoPdt.setText(String.valueOf(soPdt));
                     lblSoKeToan.setText(String.valueOf(soKeToan));
                     lblSoSinhVien.setText(String.valueOf(soSinhVien));
 

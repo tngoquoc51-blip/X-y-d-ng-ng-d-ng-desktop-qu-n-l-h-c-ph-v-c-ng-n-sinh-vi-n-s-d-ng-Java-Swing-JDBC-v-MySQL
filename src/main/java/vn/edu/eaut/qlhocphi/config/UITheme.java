@@ -7,23 +7,20 @@ import java.awt.*;
 import java.awt.AlphaComposite;
 
 /**
- * Bo mau va font chung cho toan bo giao dien - phong cach "Indigo Ink", ho tro 2
- * CHE DO: SANG (mac dinh) va TOI. Cac field mau chuyen tu "static final" sang
- * "static" (KHONG con final) de co the doi gia tri luc dang chay khi nguoi dung
- * bam nut chuyen Sang/Toi (xem ThemeToggleButton). Moi ham dung mau (card(),
- * statCard(), gradientBanner(), cac nut...) doc field static nay MOI LAN VE lai,
- * nen tu dong nhan mau moi ngay sau khi goi apDungTheoCheDo() - khong can sua gi
- * them o cac ham do.
+ * Bộ màu & font chung toàn hệ thống – phong cách "Soft Azure Thesis"
  *
- * LUU Y: doi mau field static chi anh huong CACH VE cua cac component duoc TAO MOI
- * hoac VE LAI (repaint) sau do. Cac thanh phan da setBackground(...) mot lan luc
- * khoi tao (VD getContentPane().setBackground(UITheme.BG_MAIN) trong MainFrame)
- * se KHONG tu doi mau - can rebuild lai cua so (xem huong dan patch MainFrame o
- * cuoi cau tra loi kem theo file nay).
+ * Giao diện SÁNG sạch: sidebar trắng, primary xanh azure tinh tế,
+ * card trắng, nền xám-xanh rất nhạt. Phối màu hài hòa, hiện đại,
+ * phù hợp đồ án tốt nghiệp (không dùng sidebar tối).
+ *
+ * Hỗ trợ 2 chế độ SANG / TỐI. Field màu static (không final) để đổi runtime.
+ *
+ * Màn đăng nhập (LoginFrame / StudentLoginFrame) KHÔNG sửa – giữ nguyên.
+ * Chỉ trang sau đăng nhập (Admin / Sinh viên / Kế toán) nhận palette này.
  */
 public class UITheme {
     // ===================================================================
-    // ===== CAC FIELD MAU DANG DUNG THUC TE - khong con "final", doi duoc =====
+    // ===== FIELD MÀU ĐANG DÙNG – static, đổi được runtime =====
     // ===================================================================
     public static Color BG_MAIN;
     public static Color BG_CARD;
@@ -64,86 +61,84 @@ public class UITheme {
     public static final Font FONT_H2    = new Font("Segoe UI", Font.BOLD, 16);
 
     // ===================================================================
-    // ===== BANG MAU CHE DO SANG (goc, khong doi) =====
+    // ===== BẢNG MÀU CHẾ ĐỘ SÁNG – Soft Azure Thesis (sạch, hiện đại) =====
     // ===================================================================
-    private static final Color L_BG_MAIN      = new Color(0xF3, 0xF4, 0xFB);
+    private static final Color L_BG_MAIN      = new Color(0xF0, 0xF4, 0xF8); // nền xám-xanh rất nhạt
     private static final Color L_BG_CARD      = Color.WHITE;
-    private static final Color L_BG_SIDEBAR   = new Color(0x14, 0x16, 0x2E);
-    private static final Color L_PRIMARY      = new Color(0x5B, 0x4F, 0xE8);
-    private static final Color L_PRIMARY_DARK = new Color(0x40, 0x35, 0xC7);
-    private static final Color L_ACCENT_TEAL  = new Color(0xFF, 0x9F, 0x1C);
-    private static final Color L_SUCCESS      = new Color(0x16, 0xA3, 0x4A);
-    private static final Color L_WARNING      = new Color(0xF5, 0x9E, 0x0B);
-    private static final Color L_DANGER       = new Color(0xE1, 0x1D, 0x48);
-    private static final Color L_TEXT_PRIMARY = new Color(0x18, 0x1A, 0x2E);
-    private static final Color L_TEXT_MUTED   = new Color(0x6B, 0x70, 0x8C);
-    private static final Color L_BORDER       = new Color(0xE4, 0xE5, 0xF2);
-    private static final Color L_SHADOW_TONE  = new Color(0xDD, 0xDE, 0xF0);
+    private static final Color L_BG_SIDEBAR   = Color.WHITE;                 // sidebar trắng sạch
+    private static final Color L_PRIMARY      = new Color(0x25, 0x63, 0xEB); // blue-600 – azure tinh tế
+    private static final Color L_PRIMARY_DARK = new Color(0x1D, 0x4E, 0xD8); // blue-700
+    private static final Color L_ACCENT_TEAL  = new Color(0xF5, 0x9E, 0x0B); // amber CTA
+    private static final Color L_SUCCESS      = new Color(0x05, 0x96, 0x69); // emerald-600
+    private static final Color L_WARNING      = new Color(0xD9, 0x77, 0x06);
+    private static final Color L_DANGER       = new Color(0xDC, 0x26, 0x26);
+    private static final Color L_TEXT_PRIMARY = new Color(0x0F, 0x17, 0x2A); // slate-900
+    private static final Color L_TEXT_MUTED   = new Color(0x64, 0x74, 0x8B); // slate-500
+    private static final Color L_BORDER       = new Color(0xE2, 0xE8, 0xF0); // slate-200
+    private static final Color L_SHADOW_TONE  = new Color(0xCB, 0xD5, 0xE1); // slate-300
 
-    private static final Color L_TINT_VIOLET  = new Color(0xEC, 0xEA, 0xFC);
-    private static final Color L_TEXT_VIOLET  = new Color(0x5B, 0x4F, 0xE8);
-    private static final Color L_TINT_GREEN   = new Color(0xE1, 0xF7, 0xEA);
-    private static final Color L_TEXT_GREEN   = new Color(0x16, 0xA3, 0x4A);
-    private static final Color L_TINT_RED     = new Color(0xFC, 0xE4, 0xEA);
-    private static final Color L_TEXT_RED     = new Color(0xE1, 0x1D, 0x48);
-    private static final Color L_TINT_BLUE    = new Color(0xE3, 0xEE, 0xFC);
-    private static final Color L_TEXT_BLUE    = new Color(0x22, 0x6B, 0xD6);
+    // Stat cards – pastel nhẹ nhàng
+    private static final Color L_TINT_VIOLET  = new Color(0xDB, 0xEA, 0xFE); // blue-100
+    private static final Color L_TEXT_VIOLET  = new Color(0x25, 0x63, 0xEB);
+    private static final Color L_TINT_GREEN   = new Color(0xD1, 0xFA, 0xE5); // emerald-100
+    private static final Color L_TEXT_GREEN   = new Color(0x05, 0x96, 0x69);
+    private static final Color L_TINT_RED     = new Color(0xFE, 0xE2, 0xE2); // red-100
+    private static final Color L_TEXT_RED     = new Color(0xDC, 0x26, 0x26);
+    private static final Color L_TINT_BLUE    = new Color(0xE0, 0xE7, 0xFF); // indigo-100
+    private static final Color L_TEXT_BLUE    = new Color(0x4F, 0x46, 0xE5);
 
-    private static final Color L_SIDEBAR_BLUE   = new Color(0x38, 0xBD, 0xF8);
-    private static final Color L_SIDEBAR_ORANGE = new Color(0xFB, 0x92, 0x3C);
-    private static final Color L_SIDEBAR_GREEN  = new Color(0x34, 0xD3, 0x99);
-    private static final Color L_SIDEBAR_PURPLE = new Color(0xA7, 0x8B, 0xFA);
-    private static final Color L_SIDEBAR_GRAY   = new Color(0x94, 0xA3, 0xC7);
-    private static final Color L_SIDEBAR_ACTIVE = new Color(0x2E, 0x2A, 0x5C);
+    // Icon menu sidebar (nền trắng → dùng màu đậm vừa phải)
+    private static final Color L_SIDEBAR_BLUE   = new Color(0x3B, 0x82, 0xF6); // blue-500
+    private static final Color L_SIDEBAR_ORANGE = new Color(0xF5, 0x9E, 0x0B); // amber-500
+    private static final Color L_SIDEBAR_GREEN  = new Color(0x10, 0xB9, 0x81); // emerald-500
+    private static final Color L_SIDEBAR_PURPLE = new Color(0x8B, 0x5C, 0xF6); // violet-500
+    private static final Color L_SIDEBAR_GRAY   = new Color(0x64, 0x74, 0x8B); // slate-500
+    private static final Color L_SIDEBAR_ACTIVE = new Color(0xEF, 0xF6, 0xFF); // blue-50 – nền active nhẹ
 
-    private static final Color L_HEADER_TEAL_1 = new Color(0x40, 0x35, 0xC7);
-    private static final Color L_HEADER_TEAL_2 = new Color(0x5B, 0x4F, 0xE8);
+    // Header / banner gradient – azure dịu, không quá chói
+    private static final Color L_HEADER_TEAL_1 = new Color(0x1D, 0x4E, 0xD8); // blue-700
+    private static final Color L_HEADER_TEAL_2 = new Color(0x3B, 0x82, 0xF6); // blue-500
 
     // ===================================================================
-    // ===== BANG MAU CHE DO TOI (moi) =====
+    // ===== BẢNG MÀU CHẾ ĐỘ TỐI – Soft Night =====
     // ===================================================================
-    private static final Color D_BG_MAIN      = new Color(0x0F, 0x10, 0x24); // nen chinh - indigo rat tham
-    private static final Color D_BG_CARD      = new Color(0x1B, 0x1D, 0x3A); // card sang hon nen chinh 1 chut
-    private static final Color D_BG_SIDEBAR   = new Color(0x0A, 0x0B, 0x1C); // sidebar tham hon nua de phan tang
-    private static final Color D_PRIMARY      = new Color(0x7C, 0x72, 0xF0); // tim sang hon, noi ro tren nen toi
-    private static final Color D_PRIMARY_DARK = new Color(0x5B, 0x4F, 0xE8);
-    private static final Color D_ACCENT_TEAL  = new Color(0xFF, 0xB8, 0x4D);
+    private static final Color D_BG_MAIN      = new Color(0x0F, 0x17, 0x2A);
+    private static final Color D_BG_CARD      = new Color(0x1E, 0x29, 0x3B);
+    private static final Color D_BG_SIDEBAR   = new Color(0x1E, 0x29, 0x3B);
+    private static final Color D_PRIMARY      = new Color(0x60, 0xA5, 0xFA);
+    private static final Color D_PRIMARY_DARK = new Color(0x3B, 0x82, 0xF6);
+    private static final Color D_ACCENT_TEAL  = new Color(0xFB, 0xBF, 0x24);
     private static final Color D_SUCCESS      = new Color(0x34, 0xD3, 0x99);
     private static final Color D_WARNING      = new Color(0xFB, 0xBF, 0x24);
-    private static final Color D_DANGER       = new Color(0xFB, 0x71, 0x85);
-    private static final Color D_TEXT_PRIMARY = new Color(0xF1, 0xF1, 0xFA); // gan trang
-    private static final Color D_TEXT_MUTED   = new Color(0x92, 0x96, 0xB8);
-    private static final Color D_BORDER       = new Color(0x2E, 0x30, 0x50);
-    private static final Color D_SHADOW_TONE  = new Color(0x05, 0x06, 0x0F); // bong tham hon nen ca
+    private static final Color D_DANGER       = new Color(0xF8, 0x71, 0x71);
+    private static final Color D_TEXT_PRIMARY = new Color(0xF1, 0xF5, 0xF9);
+    private static final Color D_TEXT_MUTED   = new Color(0x94, 0xA3, 0xB8);
+    private static final Color D_BORDER       = new Color(0x33, 0x41, 0x55);
+    private static final Color D_SHADOW_TONE  = new Color(0x02, 0x04, 0x08);
 
-    private static final Color D_TINT_VIOLET  = new Color(0x2A, 0x27, 0x60);
-    private static final Color D_TEXT_VIOLET  = new Color(0xB3, 0xAB, 0xFB);
-    private static final Color D_TINT_GREEN   = new Color(0x12, 0x35, 0x26);
-    private static final Color D_TEXT_GREEN   = new Color(0x4A, 0xDE, 0x80);
-    private static final Color D_TINT_RED     = new Color(0x3A, 0x16, 0x20);
-    private static final Color D_TEXT_RED     = new Color(0xFB, 0x71, 0x85);
-    private static final Color D_TINT_BLUE    = new Color(0x15, 0x2A, 0x46);
-    private static final Color D_TEXT_BLUE    = new Color(0x60, 0xA5, 0xFA);
+    private static final Color D_TINT_VIOLET  = new Color(0x1E, 0x3A, 0x5F);
+    private static final Color D_TEXT_VIOLET  = new Color(0x93, 0xC5, 0xFD);
+    private static final Color D_TINT_GREEN   = new Color(0x0A, 0x2E, 0x22);
+    private static final Color D_TEXT_GREEN   = new Color(0x6E, 0xE7, 0xB7);
+    private static final Color D_TINT_RED     = new Color(0x3B, 0x12, 0x12);
+    private static final Color D_TEXT_RED     = new Color(0xF8, 0x71, 0x71);
+    private static final Color D_TINT_BLUE    = new Color(0x1E, 0x1B, 0x4B);
+    private static final Color D_TEXT_BLUE    = new Color(0xA5, 0xB4, 0xFC);
 
-    // Sidebar da tham san o ca 2 che do - giu nguyen mau khoi vuong menu cho de nhan dien,
-    // chi doi rieng mau "dang active" cho sang hon 1 chut de de phan biet tren nen toi hon.
-    private static final Color D_SIDEBAR_BLUE   = L_SIDEBAR_BLUE;
-    private static final Color D_SIDEBAR_ORANGE = L_SIDEBAR_ORANGE;
-    private static final Color D_SIDEBAR_GREEN  = L_SIDEBAR_GREEN;
-    private static final Color D_SIDEBAR_PURPLE = L_SIDEBAR_PURPLE;
-    private static final Color D_SIDEBAR_GRAY   = L_SIDEBAR_GRAY;
-    private static final Color D_SIDEBAR_ACTIVE = new Color(0x3A, 0x35, 0x70);
+    private static final Color D_SIDEBAR_BLUE   = new Color(0x60, 0xA5, 0xFA);
+    private static final Color D_SIDEBAR_ORANGE = new Color(0xFB, 0xBF, 0x24);
+    private static final Color D_SIDEBAR_GREEN  = new Color(0x34, 0xD3, 0x99);
+    private static final Color D_SIDEBAR_PURPLE = new Color(0xA7, 0x8B, 0xFA);
+    private static final Color D_SIDEBAR_GRAY   = new Color(0x94, 0xA3, 0xB8);
+    private static final Color D_SIDEBAR_ACTIVE = new Color(0x1E, 0x3A, 0x8A);
 
-    private static final Color D_HEADER_TEAL_1 = new Color(0x2A, 0x25, 0x60);
-    private static final Color D_HEADER_TEAL_2 = new Color(0x5B, 0x4F, 0xE8);
+    private static final Color D_HEADER_TEAL_1 = new Color(0x1D, 0x4E, 0xD8);
+    private static final Color D_HEADER_TEAL_2 = new Color(0x3B, 0x82, 0xF6);
 
     static {
-        // Khoi tao gia tri mac dinh = che do SANG ngay khi class duoc nap, dam bao moi
-        // field co gia tri hop le tu truoc khi ai goi toi apDungTheoCheDo() lan dau.
         apDungTheoCheDo();
     }
 
-    /** Nap lai toan bo field mau theo dung ThemeMode.layHienTai() hien tai (SANG hoac TOI). */
     public static void apDungTheoCheDo() {
         boolean toi = ThemeMode.layHienTai().laToi();
 
@@ -183,7 +178,6 @@ public class UITheme {
         capNhatUIManager();
     }
 
-    /** Cap nhat lai cac gia tri mau mac dinh cua Swing LookAndFeel theo che do hien tai. */
     private static void capNhatUIManager() {
         UIManager.put("control", BG_MAIN);
         UIManager.put("info", BG_CARD);
@@ -196,7 +190,6 @@ public class UITheme {
         UIManager.put("OptionPane.messageForeground", new ColorUIResource(TEXT_PRIMARY));
     }
 
-    /** Goi 1 lan trong main() truoc khi tao bat ky JFrame nao. */
     public static void apply() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -209,8 +202,7 @@ public class UITheme {
         UIManager.put("Table.font", new FontUIResource(FONT_BASE));
         UIManager.put("TableHeader.font", new FontUIResource(FONT_BOLD));
 
-        ThemeAutoFixer.kichHoat();   // ✅ THÊM DÒNG NÀY
-
+        ThemeAutoFixer.kichHoat();
         apDungTheoCheDo();
     }
 
@@ -235,7 +227,6 @@ public class UITheme {
         return buildFlatButton(text, DANGER, Color.WHITE);
     }
 
-    /** Nut nhan manh nhat - dung mau cam ho phach (ACCENT_TEAL) cho hanh dong quan trong can noi bat tuyet doi. */
     public static JButton accentButton(String text) {
         return buildFlatButton(text, ACCENT_TEAL, new Color(0x1A, 0x14, 0x02));
     }
@@ -253,10 +244,6 @@ public class UITheme {
         return b;
     }
 
-    /**
-     * The "elevated card": nen trang/toi tuy che do, bo goc, co khoi bong DUC (khong
-     * dung alpha) lech xuong-phai vai px de tao cam giac noi khoi.
-     */
     public static JPanel card() {
         JPanel p = new JPanel() {
             @Override
@@ -295,7 +282,6 @@ public class UITheme {
         return l;
     }
 
-    /** Banner gradient chinh - dung cho tieu de man hinh. */
     public static JPanel gradientBanner() {
         JPanel p = new JPanel(new BorderLayout()) {
             @Override
@@ -310,7 +296,7 @@ public class UITheme {
                 g2.setPaint(gp);
                 g2.fillRoundRect(0, 0, w, h, 16, 16);
 
-                GradientPaint glow = new GradientPaint(0, 0, new Color(0x74, 0x69, 0xF2), w * 0.5f, h * 0.9f, PRIMARY);
+                GradientPaint glow = new GradientPaint(0, 0, new Color(0x93, 0xC5, 0xFD), w * 0.5f, h * 0.9f, PRIMARY);
                 g2.setPaint(glow);
                 g2.setClip(new java.awt.geom.RoundRectangle2D.Float(0, 0, w, h, 16, 16));
                 g2.fillOval(-w / 4, -h, w, h * 2);
@@ -523,7 +509,6 @@ public class UITheme {
         return row;
     }
 
-    // ===== Hoa tiet nen chu de "hoc tap" - dung chung cho cac man hinh dang nhap =====
     private static final String[] HOA_TIET_HOC_TAP = {
             "\uD83C\uDF93", "\uD83D\uDCDA", "\u270F\uFE0F", "\uD83D\uDCD6", "\uD83D\uDD8A\uFE0F",
             "\uD83D\uDCD0", "\uD83E\uDDEE", "\uD83D\uDCDD", "\uD83D\uDCBB", "\uD83C\uDFAF",
