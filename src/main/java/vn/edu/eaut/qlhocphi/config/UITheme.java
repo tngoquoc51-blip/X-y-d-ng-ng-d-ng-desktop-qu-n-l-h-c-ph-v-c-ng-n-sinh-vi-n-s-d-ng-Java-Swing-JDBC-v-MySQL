@@ -7,16 +7,15 @@ import java.awt.*;
 import java.awt.AlphaComposite;
 
 /**
- * Bộ màu & font chung toàn hệ thống – phong cách "Soft Azure Thesis"
+ * Bộ màu & font chung toàn hệ thống – phong cách "Modern Sky University"
  *
- * Giao diện SÁNG sạch: sidebar trắng, primary xanh azure tinh tế,
- * card trắng, nền xám-xanh rất nhạt. Phối màu hài hòa, hiện đại,
- * phù hợp đồ án tốt nghiệp (không dùng sidebar tối).
+ * Sky hiện đại, dịu, chuyên nghiệp cho hệ thống quản lý sinh viên / học phí
+ * trường đại học. Sidebar & header dùng tông sky đồng bộ; content sáng sạch.
  *
  * Hỗ trợ 2 chế độ SANG / TỐI. Field màu static (không final) để đổi runtime.
  *
  * Màn đăng nhập (LoginFrame / StudentLoginFrame) KHÔNG sửa – giữ nguyên.
- * Chỉ trang sau đăng nhập (Admin / Sinh viên / Kế toán) nhận palette này.
+ * Chỉ trang sau đăng nhập nhận palette này.
  */
 public class UITheme {
     // ===================================================================
@@ -55,85 +54,98 @@ public class UITheme {
     public static Color HEADER_TEAL_1;
     public static Color HEADER_TEAL_2;
 
+    /** Bộ sky dùng chung header + sidebar (MainFrame). */
+    public static Color SKY_DAM;
+    public static Color SKY_GIUA;
+    public static Color SKY_NHAT;
+
     public static final Font FONT_BASE  = new Font("Segoe UI", Font.PLAIN, 14);
     public static final Font FONT_BOLD  = new Font("Segoe UI", Font.BOLD, 14);
     public static final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 20);
     public static final Font FONT_H2    = new Font("Segoe UI", Font.BOLD, 16);
 
     // ===================================================================
-    // ===== BẢNG MÀU CHẾ ĐỘ SÁNG – Soft Azure Thesis (sạch, hiện đại) =====
+    // ===== BẢNG MÀU CHẾ ĐỘ SÁNG – Modern Sky University =====
     // ===================================================================
-    private static final Color L_BG_MAIN      = new Color(0xF0, 0xF4, 0xF8); // nền xám-xanh rất nhạt
+    private static final Color L_BG_MAIN      = new Color(0xF0, 0xF9, 0xFF); // sky-50 – nền dịu
     private static final Color L_BG_CARD      = Color.WHITE;
-    private static final Color L_BG_SIDEBAR   = Color.WHITE;                 // sidebar trắng sạch
-    private static final Color L_PRIMARY      = new Color(0x25, 0x63, 0xEB); // blue-600 – azure tinh tế
-    private static final Color L_PRIMARY_DARK = new Color(0x1D, 0x4E, 0xD8); // blue-700
+    private static final Color L_BG_SIDEBAR   = new Color(0x02, 0x5A, 0x8C);
+    private static final Color L_PRIMARY      = new Color(0x02, 0x84, 0xC7); // sky-600
+    private static final Color L_PRIMARY_DARK = new Color(0x02, 0x5A, 0x8C);
     private static final Color L_ACCENT_TEAL  = new Color(0xF5, 0x9E, 0x0B); // amber CTA
     private static final Color L_SUCCESS      = new Color(0x05, 0x96, 0x69); // emerald-600
     private static final Color L_WARNING      = new Color(0xD9, 0x77, 0x06);
     private static final Color L_DANGER       = new Color(0xDC, 0x26, 0x26);
-    private static final Color L_TEXT_PRIMARY = new Color(0x0F, 0x17, 0x2A); // slate-900
-    private static final Color L_TEXT_MUTED   = new Color(0x64, 0x74, 0x8B); // slate-500
-    private static final Color L_BORDER       = new Color(0xE2, 0xE8, 0xF0); // slate-200
-    private static final Color L_SHADOW_TONE  = new Color(0xCB, 0xD5, 0xE1); // slate-300
+    private static final Color L_TEXT_PRIMARY = new Color(0x0F, 0x17, 0x2A);
+    private static final Color L_TEXT_MUTED   = new Color(0x64, 0x74, 0x8B);
+    private static final Color L_BORDER       = new Color(0xE0, 0xF2, 0xFE); // sky-100
+    private static final Color L_SHADOW_TONE  = new Color(0xBA, 0xE6, 0xFD); // sky-200
 
-    // Stat cards – pastel nhẹ nhàng
-    private static final Color L_TINT_VIOLET  = new Color(0xDB, 0xEA, 0xFE); // blue-100
-    private static final Color L_TEXT_VIOLET  = new Color(0x25, 0x63, 0xEB);
-    private static final Color L_TINT_GREEN   = new Color(0xD1, 0xFA, 0xE5); // emerald-100
+    // Stat cards
+    private static final Color L_TINT_VIOLET  = new Color(0xE0, 0xF2, 0xFE); // sky-100
+    private static final Color L_TEXT_VIOLET  = new Color(0x02, 0x84, 0xC7);
+    private static final Color L_TINT_GREEN   = new Color(0xD1, 0xFA, 0xE5);
     private static final Color L_TEXT_GREEN   = new Color(0x05, 0x96, 0x69);
-    private static final Color L_TINT_RED     = new Color(0xFE, 0xE2, 0xE2); // red-100
+    private static final Color L_TINT_RED     = new Color(0xFE, 0xE2, 0xE2);
     private static final Color L_TEXT_RED     = new Color(0xDC, 0x26, 0x26);
-    private static final Color L_TINT_BLUE    = new Color(0xE0, 0xE7, 0xFF); // indigo-100
-    private static final Color L_TEXT_BLUE    = new Color(0x4F, 0x46, 0xE5);
+    private static final Color L_TINT_BLUE    = new Color(0xDB, 0xEA, 0xFE);
+    private static final Color L_TEXT_BLUE    = new Color(0x1D, 0x4E, 0xD8);
 
-    // Icon menu sidebar (nền trắng → dùng màu đậm vừa phải)
-    private static final Color L_SIDEBAR_BLUE   = new Color(0x3B, 0x82, 0xF6); // blue-500
-    private static final Color L_SIDEBAR_ORANGE = new Color(0xF5, 0x9E, 0x0B); // amber-500
-    private static final Color L_SIDEBAR_GREEN  = new Color(0x10, 0xB9, 0x81); // emerald-500
-    private static final Color L_SIDEBAR_PURPLE = new Color(0x8B, 0x5C, 0xF6); // violet-500
-    private static final Color L_SIDEBAR_GRAY   = new Color(0x64, 0x74, 0x8B); // slate-500
-    private static final Color L_SIDEBAR_ACTIVE = new Color(0xEF, 0xF6, 0xFF); // blue-50 – nền active nhẹ
+    // Icon menu (nền sky → dùng màu sáng rõ)
+    private static final Color L_SIDEBAR_BLUE   = new Color(0x7D, 0xD3, 0xFC); // sky-300
+    private static final Color L_SIDEBAR_ORANGE = new Color(0xFB, 0xBF, 0x24);
+    private static final Color L_SIDEBAR_GREEN  = new Color(0x6E, 0xE7, 0xB7);
+    private static final Color L_SIDEBAR_PURPLE = new Color(0xC4, 0xB5, 0xFD);
+    private static final Color L_SIDEBAR_GRAY   = new Color(0xE0, 0xF2, 0xFE);
+    private static final Color L_SIDEBAR_ACTIVE = new Color(255, 255, 255, 230);
 
-    // Header / banner gradient – azure dịu, không quá chói
-    private static final Color L_HEADER_TEAL_1 = new Color(0x1D, 0x4E, 0xD8); // blue-700
-    private static final Color L_HEADER_TEAL_2 = new Color(0x3B, 0x82, 0xF6); // blue-500
+    private static final Color L_HEADER_TEAL_1 = new Color(0x02, 0x5A, 0x8C);
+    private static final Color L_HEADER_TEAL_2 = new Color(0x02, 0x84, 0xC7);
+
+    // Sky gradient – dịu, chuyên nghiệp (không quá chói)
+    private static final Color L_SKY_DAM  = new Color(0x02, 0x5A, 0x8C); // sâu hơn – chữ trắng rõ
+    private static final Color L_SKY_GIUA = new Color(0x02, 0x84, 0xC7); // sky-600
+    private static final Color L_SKY_NHAT = new Color(0x38, 0xBD, 0xF8); // sky-400 – không xuống quá nhạt
 
     // ===================================================================
-    // ===== BẢNG MÀU CHẾ ĐỘ TỐI – Soft Night =====
+    // ===== BẢNG MÀU CHẾ ĐỘ TỐI =====
     // ===================================================================
-    private static final Color D_BG_MAIN      = new Color(0x0F, 0x17, 0x2A);
-    private static final Color D_BG_CARD      = new Color(0x1E, 0x29, 0x3B);
-    private static final Color D_BG_SIDEBAR   = new Color(0x1E, 0x29, 0x3B);
-    private static final Color D_PRIMARY      = new Color(0x60, 0xA5, 0xFA);
-    private static final Color D_PRIMARY_DARK = new Color(0x3B, 0x82, 0xF6);
+    private static final Color D_BG_MAIN      = new Color(0x0C, 0x14, 0x22);
+    private static final Color D_BG_CARD      = new Color(0x15, 0x23, 0x36);
+    private static final Color D_BG_SIDEBAR   = new Color(0x0C, 0x4A, 0x6E);
+    private static final Color D_PRIMARY      = new Color(0x38, 0xBD, 0xF8);
+    private static final Color D_PRIMARY_DARK = new Color(0x0E, 0xA5, 0xE9);
     private static final Color D_ACCENT_TEAL  = new Color(0xFB, 0xBF, 0x24);
     private static final Color D_SUCCESS      = new Color(0x34, 0xD3, 0x99);
     private static final Color D_WARNING      = new Color(0xFB, 0xBF, 0x24);
     private static final Color D_DANGER       = new Color(0xF8, 0x71, 0x71);
-    private static final Color D_TEXT_PRIMARY = new Color(0xF1, 0xF5, 0xF9);
-    private static final Color D_TEXT_MUTED   = new Color(0x94, 0xA3, 0xB8);
-    private static final Color D_BORDER       = new Color(0x33, 0x41, 0x55);
+    private static final Color D_TEXT_PRIMARY = new Color(0xF0, 0xF9, 0xFF);
+    private static final Color D_TEXT_MUTED   = new Color(0x7D, 0xD3, 0xFC);
+    private static final Color D_BORDER       = new Color(0x0C, 0x4A, 0x6E);
     private static final Color D_SHADOW_TONE  = new Color(0x02, 0x04, 0x08);
 
-    private static final Color D_TINT_VIOLET  = new Color(0x1E, 0x3A, 0x5F);
-    private static final Color D_TEXT_VIOLET  = new Color(0x93, 0xC5, 0xFD);
+    private static final Color D_TINT_VIOLET  = new Color(0x0C, 0x3A, 0x52);
+    private static final Color D_TEXT_VIOLET  = new Color(0x7D, 0xD3, 0xFC);
     private static final Color D_TINT_GREEN   = new Color(0x0A, 0x2E, 0x22);
     private static final Color D_TEXT_GREEN   = new Color(0x6E, 0xE7, 0xB7);
     private static final Color D_TINT_RED     = new Color(0x3B, 0x12, 0x12);
     private static final Color D_TEXT_RED     = new Color(0xF8, 0x71, 0x71);
-    private static final Color D_TINT_BLUE    = new Color(0x1E, 0x1B, 0x4B);
-    private static final Color D_TEXT_BLUE    = new Color(0xA5, 0xB4, 0xFC);
+    private static final Color D_TINT_BLUE    = new Color(0x12, 0x20, 0x3A);
+    private static final Color D_TEXT_BLUE    = new Color(0x93, 0xC5, 0xFD);
 
-    private static final Color D_SIDEBAR_BLUE   = new Color(0x60, 0xA5, 0xFA);
+    private static final Color D_SIDEBAR_BLUE   = new Color(0x7D, 0xD3, 0xFC);
     private static final Color D_SIDEBAR_ORANGE = new Color(0xFB, 0xBF, 0x24);
-    private static final Color D_SIDEBAR_GREEN  = new Color(0x34, 0xD3, 0x99);
-    private static final Color D_SIDEBAR_PURPLE = new Color(0xA7, 0x8B, 0xFA);
-    private static final Color D_SIDEBAR_GRAY   = new Color(0x94, 0xA3, 0xB8);
-    private static final Color D_SIDEBAR_ACTIVE = new Color(0x1E, 0x3A, 0x8A);
+    private static final Color D_SIDEBAR_GREEN  = new Color(0x6E, 0xE7, 0xB7);
+    private static final Color D_SIDEBAR_PURPLE = new Color(0xC4, 0xB5, 0xFD);
+    private static final Color D_SIDEBAR_GRAY   = new Color(0xBA, 0xE6, 0xFD);
+    private static final Color D_SIDEBAR_ACTIVE = new Color(0x0C, 0x4A, 0x6E);
 
-    private static final Color D_HEADER_TEAL_1 = new Color(0x1D, 0x4E, 0xD8);
-    private static final Color D_HEADER_TEAL_2 = new Color(0x3B, 0x82, 0xF6);
+    private static final Color D_HEADER_TEAL_1 = new Color(0x0C, 0x4A, 0x6E);
+    private static final Color D_HEADER_TEAL_2 = new Color(0x02, 0x84, 0xC7);
+
+    private static final Color D_SKY_DAM  = new Color(0x0C, 0x4A, 0x6E);
+    private static final Color D_SKY_GIUA = new Color(0x03, 0x69, 0xA1);
+    private static final Color D_SKY_NHAT = new Color(0x0E, 0xA5, 0xE9);
 
     static {
         apDungTheoCheDo();
@@ -175,6 +187,10 @@ public class UITheme {
         HEADER_TEAL_1 = toi ? D_HEADER_TEAL_1 : L_HEADER_TEAL_1;
         HEADER_TEAL_2 = toi ? D_HEADER_TEAL_2 : L_HEADER_TEAL_2;
 
+        SKY_DAM  = toi ? D_SKY_DAM  : L_SKY_DAM;
+        SKY_GIUA = toi ? D_SKY_GIUA : L_SKY_GIUA;
+        SKY_NHAT = toi ? D_SKY_NHAT : L_SKY_NHAT;
+
         capNhatUIManager();
     }
 
@@ -184,7 +200,6 @@ public class UITheme {
         UIManager.put("nimbusBase", PRIMARY);
         UIManager.put("nimbusBlueGrey", BG_MAIN);
         UIManager.put("text", TEXT_PRIMARY);
-
         UIManager.put("Panel.background", new ColorUIResource(BG_MAIN));
         UIManager.put("OptionPane.background", new ColorUIResource(BG_CARD));
         UIManager.put("OptionPane.messageForeground", new ColorUIResource(TEXT_PRIMARY));
@@ -195,13 +210,11 @@ public class UITheme {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {
         }
-
         UIManager.put("Button.font", new FontUIResource(FONT_BASE));
         UIManager.put("Label.font", new FontUIResource(FONT_BASE));
         UIManager.put("TextField.font", new FontUIResource(FONT_BASE));
         UIManager.put("Table.font", new FontUIResource(FONT_BASE));
         UIManager.put("TableHeader.font", new FontUIResource(FONT_BOLD));
-
         ThemeAutoFixer.kichHoat();
         apDungTheoCheDo();
     }
@@ -291,16 +304,13 @@ public class UITheme {
                 int w = getWidth(), h = getHeight();
                 g2.setColor(getParent() != null ? getParent().getBackground() : BG_MAIN);
                 g2.fillRect(0, 0, w, h);
-
                 GradientPaint gp = new GradientPaint(0, 0, PRIMARY_DARK, w, h, PRIMARY);
                 g2.setPaint(gp);
                 g2.fillRoundRect(0, 0, w, h, 16, 16);
-
-                GradientPaint glow = new GradientPaint(0, 0, new Color(0x93, 0xC5, 0xFD), w * 0.5f, h * 0.9f, PRIMARY);
+                GradientPaint glow = new GradientPaint(0, 0, new Color(0x7D, 0xD3, 0xFC), w * 0.5f, h * 0.9f, PRIMARY);
                 g2.setPaint(glow);
                 g2.setClip(new java.awt.geom.RoundRectangle2D.Float(0, 0, w, h, 16, 16));
                 g2.fillOval(-w / 4, -h, w, h * 2);
-
                 g2.setClip(null);
                 g2.dispose();
             }
@@ -392,7 +402,6 @@ public class UITheme {
         card.setOpaque(true);
         card.setBackground(BG_MAIN);
         card.setBorder(BorderFactory.createEmptyBorder(14, 18, 16, 18));
-
         JLabel title = new JLabel(tieuDe);
         title.setFont(FONT_H2);
         title.setForeground(TEXT_PRIMARY);
@@ -422,19 +431,16 @@ public class UITheme {
         the.setBackground(BG_MAIN);
         the.setLayout(new BoxLayout(the, BoxLayout.Y_AXIS));
         the.setBorder(BorderFactory.createEmptyBorder(16, 22, 18, 20));
-
         JLabel lblNhan = new JLabel(nhan);
         lblNhan.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblNhan.setForeground(chuDam);
         lblNhan.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         JLabel lblGiaTri = new JLabel(giaTri);
         lblGiaTri.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblGiaTri.setForeground(chuDam);
         lblGiaTri.setAlignmentX(Component.LEFT_ALIGNMENT);
         lblGiaTri.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
         lblGiaTri.setName("giaTri");
-
         the.add(lblNhan);
         the.add(lblGiaTri);
         return the;
@@ -485,21 +491,17 @@ public class UITheme {
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(false);
         row.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
-
         JLabel cham = new JLabel("●");
         cham.setForeground(PRIMARY);
         cham.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-
         JLabel noiDungLabel = new JLabel(noiDung);
         noiDungLabel.setFont(FONT_BASE);
         noiDungLabel.setForeground(TEXT_PRIMARY);
-
         JPanel trai = new JPanel(new BorderLayout(10, 0));
         trai.setOpaque(false);
         trai.add(cham, BorderLayout.WEST);
         trai.add(noiDungLabel, BorderLayout.CENTER);
         row.add(trai, BorderLayout.CENTER);
-
         if (phuChu != null) {
             JLabel phuLabel = new JLabel(phuChu);
             phuLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -516,59 +518,41 @@ public class UITheme {
     };
 
     private static final Color[] MAU_HOA_TIET = {
-            new Color(0xFF, 0x9F, 0x1C),
-            new Color(0x38, 0xBD, 0xF8),
-            new Color(0x34, 0xD3, 0x99),
-            new Color(0xF4, 0x72, 0xB6),
-            new Color(0xA7, 0x8B, 0xFA),
-            new Color(0xFB, 0x71, 0x85),
-            new Color(0xFA, 0xCC, 0x15),
-            new Color(0x94, 0xE2, 0x64),
-            new Color(0x60, 0xA5, 0xFA),
-            new Color(0xF0, 0xAB, 0xFC),
-            new Color(0x2D, 0xD4, 0xBF),
-            new Color(0xFD, 0xBA, 0x74),
-            new Color(0xC4, 0xB5, 0xFD),
-            new Color(0x7D, 0xD3, 0xFC)
+            new Color(0xFF, 0x9F, 0x1C), new Color(0x38, 0xBD, 0xF8), new Color(0x34, 0xD3, 0x99),
+            new Color(0xF4, 0x72, 0xB6), new Color(0xA7, 0x8B, 0xFA), new Color(0xFB, 0x71, 0x85),
+            new Color(0xFA, 0xCC, 0x15), new Color(0x94, 0xE2, 0x64), new Color(0x60, 0xA5, 0xFA),
+            new Color(0xF0, 0xAB, 0xFC), new Color(0x2D, 0xD4, 0xBF), new Color(0xFD, 0xBA, 0x74),
+            new Color(0xC4, 0xB5, 0xFD), new Color(0x7D, 0xD3, 0xFC)
     };
 
     public static void veHoaTietHocTap(Graphics2D goc, int width, int height) {
         Graphics2D g = (Graphics2D) goc.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
         java.util.Random rd = new java.util.Random(2026);
         int soLuong = Math.max(16, (width * height) / 34000);
-
         int chiSoTruoc = -1;
         for (int i = 0; i < soLuong; i++) {
             int chiSo;
-            do {
-                chiSo = rd.nextInt(HOA_TIET_HOC_TAP.length);
-            } while (chiSo == chiSoTruoc && HOA_TIET_HOC_TAP.length > 1);
+            do { chiSo = rd.nextInt(HOA_TIET_HOC_TAP.length); }
+            while (chiSo == chiSoTruoc && HOA_TIET_HOC_TAP.length > 1);
             chiSoTruoc = chiSo;
-
             String icon = HOA_TIET_HOC_TAP[chiSo];
             Color mauIcon = MAU_HOA_TIET[chiSo % MAU_HOA_TIET.length];
-
             int kichThuoc = 42 + rd.nextInt(56);
             int x = rd.nextInt(Math.max(width, 1));
             int y = rd.nextInt(Math.max(height, 1));
             double goXoay = (rd.nextDouble() - 0.5) * (Math.PI / 6);
             float doDam = 0.30f + rd.nextFloat() * 0.20f;
-
             g.setFont(new Font("Segoe UI Symbol", Font.PLAIN, kichThuoc));
             java.awt.geom.AffineTransform cu = g.getTransform();
             g.translate(x, y);
             g.rotate(goXoay);
-
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.min(1f, doDam + 0.15f)));
             g.setColor(new Color(0, 0, 0));
             g.drawString(icon, 1, 1);
-
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, doDam));
             g.setColor(mauIcon);
             g.drawString(icon, 0, 0);
-
             g.setTransform(cu);
         }
         g.dispose();

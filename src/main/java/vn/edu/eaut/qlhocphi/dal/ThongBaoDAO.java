@@ -25,8 +25,7 @@ public class ThongBaoDAO {
         }
     }
 
-    /** Dem so thong bao CHUA DOC, gom nhom theo ManHinhKey - dung de ve badge tren sidebar.
-     *  maSV truyen null neu la ADMIN/KETOAN (khong loc theo sinh vien). */
+    /** Dem so thong bao CHUA DOC, gom nhom theo ManHinhKey - dung de ve badge tren sidebar. */
     public Map<String, Integer> demChuaDocTheoManHinh(int maTK, String vaiTro, String maSV) throws SQLException {
         String sql = "SELECT tb.ManHinhKey, COUNT(*) AS SoLuong " +
                 "FROM ThongBao tb " +
@@ -46,7 +45,6 @@ public class ThongBaoDAO {
         return ketQua;
     }
 
-    /** Danh dau TAT CA thong bao (trong pham vi quyen cua nguoi dung) cua 1 man hinh la DA DOC. */
     public void danhDauDaDocTheoManHinh(int maTK, String vaiTro, String maSV, String manHinhKey) throws SQLException {
         String sql = "INSERT IGNORE INTO ThongBaoDaDoc (MaThongBao, MaTK) " +
                 "SELECT tb.MaThongBao, ? FROM ThongBao tb " +
@@ -62,7 +60,6 @@ public class ThongBaoDAO {
         }
     }
 
-    /** Lay danh sach thong bao CHUA DOC cua 1 man hinh (VD hien trong 1 popup chi tiet neu can). */
     public List<ThongBao> layChuaDocTheoManHinh(int maTK, String vaiTro, String maSV, String manHinhKey) throws SQLException {
         String sql = "SELECT tb.* FROM ThongBao tb " +
                 "WHERE tb.ManHinhKey = ? " +
@@ -81,6 +78,71 @@ public class ThongBaoDAO {
             }
         }
         return list;
+    }
+
+    /** Lay TAT CA thong bao danh cho sinh vien (ca da doc / chua doc). */
+    public List<ThongBao> layTatCaChoSinhVien(int maTK, String maSV) throws SQLException {
+        String sql = "SELECT tb.*, " +
+                "CASE WHEN d.MaThongBao IS NULL THEN 0 ELSE 1 END AS DaDoc " +
+                "FROM ThongBao tb " +
+                "LEFT JOIN ThongBaoDaDoc d ON d.MaThongBao = tb.MaThongBao AND d.MaTK = ? " +
+                "WHERE (tb.VaiTroNhan = 'ALL' OR tb.VaiTroNhan = 'SINHVIEN') " +
+                "AND (tb.MaSVNhan IS NULL OR tb.MaSVNhan = ?) " +
+                "ORDER BY DaDoc ASC, tb.ThoiGianTao DESC " +
+                "LIMIT 200";
+        List<ThongBao> list = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, maTK);
+            ps.setString(2, maSV);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ThongBao tb = map(rs);
+                    tb.setDaDoc(rs.getInt("DaDoc") == 1);
+                    list.add(tb);
+                }
+            }
+        }
+        return list;
+    }
+
+    public int demChuaDocSinhVien(int maTK, String maSV) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM ThongBao tb " +
+                "WHERE (tb.VaiTroNhan = 'ALL' OR tb.VaiTroNhan = 'SINHVIEN') " +
+                "AND (tb.MaSVNhan IS NULL OR tb.MaSVNhan = ?) " +
+                "AND NOT EXISTS (SELECT 1 FROM ThongBaoDaDoc d WHERE d.MaThongBao = tb.MaThongBao AND d.MaTK = ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, maSV);
+            ps.setInt(2, maTK);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
+
+    public void danhDauDaDocMot(int maTK, int maThongBao) throws SQLException {
+        String sql = "INSERT IGNORE INTO ThongBaoDaDoc (MaThongBao, MaTK) VALUES (?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, maThongBao);
+            ps.setInt(2, maTK);
+            ps.executeUpdate();
+        }
+    }
+
+    public void danhDauTatCaDaDocSinhVien(int maTK, String maSV) throws SQLException {
+        String sql = "INSERT IGNORE INTO ThongBaoDaDoc (MaThongBao, MaTK) " +
+                "SELECT tb.MaThongBao, ? FROM ThongBao tb " +
+                "WHERE (tb.VaiTroNhan = 'ALL' OR tb.VaiTroNhan = 'SINHVIEN') " +
+                "AND (tb.MaSVNhan IS NULL OR tb.MaSVNhan = ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, maTK);
+            ps.setString(2, maSV);
+            ps.executeUpdate();
+        }
     }
 
     private ThongBao map(ResultSet rs) throws SQLException {

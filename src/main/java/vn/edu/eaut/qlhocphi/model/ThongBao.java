@@ -10,6 +10,8 @@ public class ThongBao {
     private String tieuDe;
     private String noiDung;
     private LocalDateTime thoiGianTao;
+    /** Chi dung o man hinh hop thu sinh vien (khong map tu DB truc tiep o moi query). */
+    private boolean daDoc;
 
     public int getMaThongBao() { return maThongBao; }
     public void setMaThongBao(int maThongBao) { this.maThongBao = maThongBao; }
@@ -31,4 +33,7 @@ public class ThongBao {
 
     public LocalDateTime getThoiGianTao() { return thoiGianTao; }
     public void setThoiGianTao(LocalDateTime thoiGianTao) { this.thoiGianTao = thoiGianTao; }
+
+    public boolean isDaDoc() { return daDoc; }
+    public void setDaDoc(boolean daDoc) { this.daDoc = daDoc; }
 }
