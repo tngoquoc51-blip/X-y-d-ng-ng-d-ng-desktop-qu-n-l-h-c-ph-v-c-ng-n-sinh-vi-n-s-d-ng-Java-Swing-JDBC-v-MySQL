@@ -77,6 +77,7 @@ public class MainFrame extends JFrame {
             content.add(new HoaDonHocPhiSinhVienPanel(taiKhoan), "hoadon_sv");
             content.add(lichSuRieng, "lichsu_sv");
             content.add(new ViDienTuPanel(taiKhoan), "vidientu");
+            content.add(new vn.edu.eaut.qlhocphi.gui.sinhvien.HocTapTinChiPanel(taiKhoan), "tinchi");
             content.add(new ChatbotPanel(), "chatbot");
             content.add(new ThongTinCaNhanPanel(taiKhoan), "thongtin");
             add(content, BorderLayout.CENTER);
@@ -300,6 +301,7 @@ public class MainFrame extends JFrame {
             themMucMenu(sidebar, "hoadon_sv", "Hóa Đơn Học Phí", UITheme.SIDEBAR_ORANGE, "DOC");
             themMucMenu(sidebar, "lichsu_sv", "Lịch Sử Thanh Toán", UITheme.SIDEBAR_GREEN, "CARD");
             themMucMenu(sidebar, "vidientu", "Ví Học Phí", UITheme.SIDEBAR_ORANGE, "CARD");
+            themMucMenu(sidebar, "tinchi", "Tiến độ & Tín chỉ", UITheme.SIDEBAR_GREEN, "BAR");
             themMucMenu(sidebar, "thongtin", "Thông Tin Cá Nhân", UITheme.SIDEBAR_GRAY, "USER");
             themMucMenu(sidebar, "chatbot", "Trợ Lý AI", UITheme.SIDEBAR_PURPLE, "BOT");
             themNutDoiMatKhau(sidebar);
@@ -342,21 +344,21 @@ public class MainFrame extends JFrame {
             sidebar.add(nhanPdt);
         }
 
-        // 11 bậc xanh (đậm → nhạt): #064E3B → #A7F3D0
-        themMucMenu(sidebar, "tongquan", "Tổng Quan", mauXanhBac(0, 11), "BAR");
+        // Icon đa màu – mỗi chức năng một màu rõ
+        themMucMenu(sidebar, "tongquan", "Tổng Quan", UITheme.SIDEBAR_BLUE, "BAR");
         if (taiKhoan.getVaiTro() == VaiTro.KETOAN) {
-            themMucMenu(sidebar, "calamviec", "Ca Làm Việc", mauXanhBac(1, 12), "CARD");
+            themMucMenu(sidebar, "calamviec", "Ca Làm Việc", UITheme.SIDEBAR_ORANGE, "CARD");
         }
-        themMucMenu(sidebar, "sinhvien", "Sinh Viên", mauXanhBac(1, 11), "USER");
-        themMucMenu(sidebar, "hocky", "Học Kỳ & Mức Phí", mauXanhBac(2, 11), "CAL");
-        themMucMenu(sidebar, "hocphi", "Hóa Đơn Học Phí", mauXanhBac(3, 11), "DOC");
-        themMucMenu(sidebar, "thanhtoan", "Thanh Toán", mauXanhBac(4, 11), "CARD");
-        themMucMenu(sidebar, "doisoat", "Đối Soát Ngân Hàng", mauXanhBac(5, 11), "BOT");
-        themMucMenu(sidebar, "lichthutudong", "Thu Tự Động", mauXanhBac(6, 11), "BOT");
-        themMucMenu(sidebar, "congno", "Công Nợ", mauXanhBac(7, 11), "BAL");
-        themMucMenu(sidebar, "baocao", "Thống Kê & Báo Cáo", mauXanhBac(8, 11), "LINE");
-        themMucMenu(sidebar, "dubaocongno", "Dự Báo AI", mauXanhBac(9, 11), "BOT");
-        themMucMenu(sidebar, "chatbot", "Trợ Lý AI (Chatbot)", mauXanhBac(10, 11), "BOT");
+        themMucMenu(sidebar, "sinhvien", "Sinh Viên", UITheme.SIDEBAR_BLUE, "USER");
+        themMucMenu(sidebar, "hocky", "Học Kỳ & Mức Phí", UITheme.SIDEBAR_ORANGE, "CAL");
+        themMucMenu(sidebar, "hocphi", "Hóa Đơn Học Phí", UITheme.SIDEBAR_PURPLE, "DOC");
+        themMucMenu(sidebar, "thanhtoan", "Thanh Toán", UITheme.SIDEBAR_GREEN, "CARD");
+        themMucMenu(sidebar, "doisoat", "Đối Soát Ngân Hàng", UITheme.SIDEBAR_PURPLE, "BOT");
+        themMucMenu(sidebar, "lichthutudong", "Thu Tự Động", UITheme.SIDEBAR_GREEN, "BOT");
+        themMucMenu(sidebar, "congno", "Công Nợ", UITheme.SIDEBAR_ORANGE, "BAL");
+        themMucMenu(sidebar, "baocao", "Thống Kê & Báo Cáo", UITheme.SIDEBAR_BLUE, "LINE");
+        themMucMenu(sidebar, "dubaocongno", "Dự Báo AI", UITheme.SIDEBAR_PURPLE, "BOT");
+        themMucMenu(sidebar, "chatbot", "Trợ Lý AI (Chatbot)", UITheme.SIDEBAR_PURPLE, "BOT");
 
         sidebar.add(Box.createVerticalGlue());
         return sidebar;

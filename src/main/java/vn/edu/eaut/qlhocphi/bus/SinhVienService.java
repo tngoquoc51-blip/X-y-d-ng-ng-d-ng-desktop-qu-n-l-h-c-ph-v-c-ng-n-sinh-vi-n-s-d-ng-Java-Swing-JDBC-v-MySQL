@@ -41,6 +41,7 @@ public class SinhVienService {
         new NhatKyHeThongService().ghi("XOA", "Sinh vien " + maSV, "Da xoa ho so sinh vien");
     }
 
+
     private void validate(SinhVien sv) {
         if (sv.getMaSV() == null || sv.getMaSV().isBlank()) {
             throw new IllegalArgumentException("Ma sinh vien khong duoc de trong");

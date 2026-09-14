@@ -39,8 +39,12 @@ public class DashboardPanel extends JPanel {
     private PieChartPanel bieuDoTron;
     private HinhThucPieChartPanel bieuDoHinhThuc;
     private LineChartPanel bieuDoXuHuong;
+    private BarChartPanel bieuDoTheoNam;
     private JPanel khoiTopNo;
     private JButton btnXuatBaoCao;
+    private JComboBox<String> cboNam;
+    private JComboBox<String> cboThang;
+    private JLabel lblLocMoTa;
 
     public DashboardPanel(java.util.function.BiConsumer<String, String> dieuHuongTimKiem) {
         this.dieuHuongTimKiem = dieuHuongTimKiem;
@@ -54,11 +58,15 @@ public class DashboardPanel extends JPanel {
         giua.setLayout(new BoxLayout(giua, BoxLayout.Y_AXIS));
         giua.add(buildTheTongQuan());
         giua.add(Box.createRigidArea(new Dimension(0, 16)));
+        giua.add(buildBoLocThangNam());
+        giua.add(Box.createRigidArea(new Dimension(0, 16)));
         giua.add(buildTyLeThuCard());
         giua.add(Box.createRigidArea(new Dimension(0, 16)));
         giua.add(buildBieuDo());
         giua.add(Box.createRigidArea(new Dimension(0, 16)));
         giua.add(buildBieuDoNangCao());
+        giua.add(Box.createRigidArea(new Dimension(0, 16)));
+        giua.add(buildBieuDoTheoNam());
         giua.add(Box.createRigidArea(new Dimension(0, 16)));
         giua.add(buildTopNoCard());
 
@@ -278,12 +286,77 @@ public class DashboardPanel extends JPanel {
 
         JPanel cardXuHuong = UITheme.card();
         cardXuHuong.setLayout(new BorderLayout(0, 8));
-        cardXuHuong.add(UITheme.sectionLabel("Xu hướng thu học phí theo tháng"), BorderLayout.NORTH);
+        cardXuHuong.add(UITheme.sectionLabel("Thu theo tháng (chọn năm để xem T1–T12)"), BorderLayout.NORTH);
         bieuDoXuHuong = new LineChartPanel();
         cardXuHuong.add(bieuDoXuHuong, BorderLayout.CENTER);
         row.add(cardXuHuong);
 
         return row;
+    }
+
+    /** Hàng biểu đồ năm – tổng thu từng năm. */
+    private JPanel buildBieuDoTheoNam() {
+        JPanel card = UITheme.card();
+        card.setLayout(new BorderLayout(0, 8));
+        card.setPreferredSize(new Dimension(10, 280));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 280));
+        card.add(UITheme.sectionLabel("Tổng thu theo năm (5 năm vận hành)"), BorderLayout.NORTH);
+        bieuDoTheoNam = new BarChartPanel();
+        card.add(bieuDoTheoNam, BorderLayout.CENTER);
+        return card;
+    }
+
+    /** Thanh lọc Năm / Tháng – Phòng Đào Tạo chọn để xem biểu đồ. */
+    private JPanel buildBoLocThangNam() {
+        JPanel card = UITheme.card();
+        card.setLayout(new BorderLayout(12, 8));
+
+        JLabel tieuDe = new JLabel("Báo cáo 5 năm vận hành – theo tháng / năm");
+        tieuDe.setFont(UITheme.FONT_BOLD);
+        tieuDe.setForeground(UITheme.TEXT_PRIMARY);
+
+        JPanel loc = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
+        loc.setOpaque(false);
+
+        loc.add(new JLabel("Năm:"));
+        cboNam = new JComboBox<>();
+        cboNam.addItem("Tất cả năm");
+        cboNam.setPreferredSize(new Dimension(120, 34));
+        cboNam.setFont(UITheme.FONT_BASE);
+        loc.add(cboNam);
+
+        loc.add(new JLabel("Tháng:"));
+        cboThang = new JComboBox<>();
+        cboThang.addItem("Tất cả tháng");
+        for (int m = 1; m <= 12; m++) cboThang.addItem("Tháng " + m);
+        cboThang.setPreferredSize(new Dimension(130, 34));
+        cboThang.setFont(UITheme.FONT_BASE);
+        loc.add(cboThang);
+
+        JButton btnXem = UITheme.primaryButton("Xem báo cáo");
+        btnXem.addActionListener(e -> taiBieuDoTheoLoc());
+        loc.add(btnXem);
+
+        JButton btnReset = UITheme.secondaryButton("Tất cả");
+        btnReset.addActionListener(e -> {
+            cboNam.setSelectedIndex(0);
+            cboThang.setSelectedIndex(0);
+            taiBieuDoTheoLoc();
+        });
+        loc.add(btnReset);
+
+        lblLocMoTa = new JLabel("Đang xem: 5 năm vận hành");
+        lblLocMoTa.setFont(UITheme.FONT_BASE);
+        lblLocMoTa.setForeground(UITheme.TEXT_MUTED);
+
+        JPanel north = new JPanel(new BorderLayout());
+        north.setOpaque(false);
+        north.add(tieuDe, BorderLayout.WEST);
+        north.add(lblLocMoTa, BorderLayout.EAST);
+
+        card.add(north, BorderLayout.NORTH);
+        card.add(loc, BorderLayout.CENTER);
+        return card;
     }
 
     // ================== TOP 5 SINH VIÊN NỢ NHIỀU NHẤT (mới hoàn toàn) ==================
@@ -408,7 +481,9 @@ public class DashboardPanel extends JPanel {
                 List<HoaDonHocPhi> danhSachNo = congNoService.layDanhSachConNo();
                 Map<String, BigDecimal> thuTheoHinhThuc = baoCaoService.thongKeThuTheoHinhThuc();
                 Map<String, BigDecimal> thuTheoThang = baoCaoService.thongKeThuTheoThang();
-                return new Object[]{tongQuan, thuTheoHocKy, theoTrangThai, danhSachNo, thuTheoHinhThuc, thuTheoThang};
+                Map<String, BigDecimal> thuTheoNam = baoCaoService.thongKeThuTheoNam();
+                List<Integer> dsNam = baoCaoService.layDanhSachNamCoDuLieu();
+                return new Object[]{tongQuan, thuTheoHocKy, theoTrangThai, danhSachNo, thuTheoHinhThuc, thuTheoThang, thuTheoNam, dsNam};
             }
 
             @Override
@@ -422,6 +497,8 @@ public class DashboardPanel extends JPanel {
                     List<HoaDonHocPhi> danhSachNo = (List<HoaDonHocPhi>) ketQua[3];
                     Map<String, BigDecimal> thuTheoHinhThuc = (Map<String, BigDecimal>) ketQua[4];
                     Map<String, BigDecimal> thuTheoThang = (Map<String, BigDecimal>) ketQua[5];
+                    Map<String, BigDecimal> thuTheoNam = (Map<String, BigDecimal>) ketQua[6];
+                    List<Integer> dsNam = (List<Integer>) ketQua[7];
 
                     capNhatTheTongQuan(tongQuan);
                     capNhatTyLeThu(tongQuan);
@@ -429,7 +506,9 @@ public class DashboardPanel extends JPanel {
                     bieuDoTron.setDuLieu(theoTrangThai);
                     bieuDoHinhThuc.setDuLieu(thuTheoHinhThuc);
                     bieuDoXuHuong.setDuLieu(thuTheoThang);
+                    if (bieuDoTheoNam != null) bieuDoTheoNam.setDuLieu(thuTheoNam);
                     capNhatTopNo(danhSachNo);
+                    napComboNam(dsNam);
                 } catch (Exception ex) {
                     UIUtils.thongBaoLoi(DashboardPanel.this, "Không thể tải dữ liệu thống kê.\n" + rootMessage(ex));
                 }
@@ -449,7 +528,75 @@ public class DashboardPanel extends JPanel {
                 + " / " + MoneyUtils.format(tongHocPhi) + ")");
     }
 
+    private void napComboNam(List<Integer> dsNam) {
+        if (cboNam == null) return;
+        String chon = (String) cboNam.getSelectedItem();
+        cboNam.removeAllItems();
+        cboNam.addItem("Tất cả năm (5 năm)");
+        // Luôn đủ 5 năm vận hành (kể cả năm chưa có dữ liệu)
+        List<Integer> namVH = dsNam != null && !dsNam.isEmpty()
+                ? dsNam
+                : baoCaoService.layDanhSachNamVanHanh();
+        for (Integer n : namVH) cboNam.addItem(String.valueOf(n));
+        if (chon != null) cboNam.setSelectedItem(chon);
+        else cboNam.setSelectedIndex(0);
+    }
+
+    /** Tải lại biểu đồ tháng / năm theo bộ lọc (SwingWorker). */
+    private void taiBieuDoTheoLoc() {
+        // Gán biến thường trước, rồi copy sang final cho SwingWorker (tránh lỗi "might already have been assigned")
+        Integer namTmp = null;
+        String sNam = cboNam != null ? (String) cboNam.getSelectedItem() : "Tất cả năm";
+        if (sNam != null && !sNam.startsWith("Tất cả")) {
+            try { namTmp = Integer.parseInt(sNam.trim()); } catch (NumberFormatException ignored) { namTmp = null; }
+        }
+        int thangTmp = 0;
+        String sThang = cboThang != null ? (String) cboThang.getSelectedItem() : "Tất cả tháng";
+        if (sThang != null && !sThang.startsWith("Tất cả")) {
+            try { thangTmp = Integer.parseInt(sThang.replace("Tháng ", "").trim()); }
+            catch (NumberFormatException ignored) { thangTmp = 0; }
+        }
+        final Integer nam = namTmp;
+        final int thang = thangTmp;
+
+        SwingWorker<Map<String, BigDecimal>[], Void> w = new SwingWorker<>() {
+            @Override
+            protected Map<String, BigDecimal>[] doInBackground() throws Exception {
+                Map<String, BigDecimal> theoThang = baoCaoService.thongKeThuTheoThang(nam);
+                // Nếu chọn 1 tháng cụ thể trong năm → chỉ giữ tháng đó
+                if (nam != null && thang >= 1 && thang <= 12) {
+                    String key = "T" + thang;
+                    Map<String, BigDecimal> one = new LinkedHashMap<>();
+                    one.put(key, theoThang.getOrDefault(key, BigDecimal.ZERO));
+                    theoThang = one;
+                }
+                Map<String, BigDecimal> theoNam = baoCaoService.thongKeThuTheoNam();
+                @SuppressWarnings("unchecked")
+                Map<String, BigDecimal>[] arr = new Map[]{theoThang, theoNam};
+                return arr;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Map<String, BigDecimal>[] arr = get();
+                    bieuDoXuHuong.setDuLieu(arr[0]);
+                    if (bieuDoTheoNam != null) bieuDoTheoNam.setDuLieu(arr[1]);
+                    String moTa;
+                    if (nam == null) moTa = "Đang xem: 5 năm vận hành (theo tháng)";
+                    else if (thang == 0) moTa = "Đang xem: cả năm " + nam + " (12 tháng)";
+                    else moTa = "Đang xem: tháng " + thang + "/" + nam;
+                    if (lblLocMoTa != null) lblLocMoTa.setText(moTa);
+                } catch (Exception ex) {
+                    UIUtils.thongBaoLoi(DashboardPanel.this, rootMessage(ex));
+                }
+            }
+        };
+        w.execute();
+    }
+
     private String rootMessage(Exception ex) {
+
         Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
         return cause.getMessage() != null ? cause.getMessage() : cause.toString();
     }
@@ -504,7 +651,18 @@ public class DashboardPanel extends JPanel {
                 int x = leTrai + i * rongMoiCot + (rongMoiCot - rongThanhCot) / 2;
                 int y = leTren + caoVe - caoThanh;
 
-                g2.setColor(UITheme.PRIMARY);
+                // Bảng màu học thuật – không trùng, chuẩn hệ thống quản lý
+                Color[] palette = {
+                        new Color(0x1D, 0x4E, 0xD8), // indigo
+                        new Color(0x0E, 0xA5, 0xE9), // sky
+                        new Color(0x10, 0xB9, 0x81), // emerald
+                        new Color(0xF5, 0x9E, 0x0B), // amber
+                        new Color(0x8B, 0x5C, 0xF6), // violet
+                        new Color(0xEF, 0x44, 0x44), // red soft
+                        new Color(0x14, 0xB8, 0xA6), // teal
+                        new Color(0x63, 0x66, 0xF1)  // indigo light
+                };
+                g2.setColor(palette[i % palette.length]);
                 g2.fillRoundRect(x, y, rongThanhCot, caoThanh, 6, 6);
 
                 String nhanGiaTri = MoneyUtils.format(e.getValue());
@@ -546,10 +704,11 @@ public class DashboardPanel extends JPanel {
 
         private Color mauCuaTrangThai(TrangThaiHoaDon tt) {
             switch (tt) {
-                case DA_DONG_DU: return UITheme.SUCCESS;
-                case DONG_MOT_PHAN: return UITheme.WARNING;
-                case QUA_HAN: return UITheme.DANGER;
-                default: return UITheme.TEXT_MUTED;
+                case DA_DONG_DU: return new Color(0x10, 0xB9, 0x81);
+                case DONG_MOT_PHAN: return new Color(0xF5, 0x9E, 0x0B);
+                case QUA_HAN: return new Color(0xEF, 0x44, 0x44);
+                case CHUA_DONG: return new Color(0x64, 0x74, 0x8B);
+                default: return new Color(0x94, 0xA3, 0xB8);
             }
         }
 
@@ -616,11 +775,11 @@ public class DashboardPanel extends JPanel {
 
         private Color mauTheoHinhThuc(String hinhThuc) {
             switch (hinhThuc) {
-                case "TIEN_MAT": return UITheme.SUCCESS;
-                case "CHUYEN_KHOAN": return UITheme.PRIMARY;
-                case "THANH_TOAN_ONLINE": return UITheme.WARNING;
-                case "VI_DIEN_TU": return UITheme.DANGER;
-                default: return UITheme.TEXT_MUTED;
+                case "TIEN_MAT": return new Color(0x10, 0xB9, 0x81);
+                case "CHUYEN_KHOAN": return new Color(0x1D, 0x4E, 0xD8);
+                case "THANH_TOAN_ONLINE": return new Color(0xF5, 0x9E, 0x0B);
+                case "VI_DIEN_TU": return new Color(0x8B, 0x5C, 0xF6);
+                default: return new Color(0x94, 0xA3, 0xB8);
             }
         }
 
@@ -744,7 +903,7 @@ public class DashboardPanel extends JPanel {
                 g2.drawString(nhan, xs[i] - wNhan / 2, leTren + caoVe + 16);
             }
 
-            g2.setColor(UITheme.PRIMARY);
+            g2.setColor(new Color(0x0E, 0xA5, 0xE9)); // sky
             g2.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             for (int i = 0; i < soDiem - 1; i++) {
                 g2.drawLine(xs[i], ys[i], xs[i + 1], ys[i + 1]);

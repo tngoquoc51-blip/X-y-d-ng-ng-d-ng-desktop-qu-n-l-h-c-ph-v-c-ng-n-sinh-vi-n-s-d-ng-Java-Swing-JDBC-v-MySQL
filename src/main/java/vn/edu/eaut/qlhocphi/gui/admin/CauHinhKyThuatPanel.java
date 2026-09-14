@@ -163,11 +163,24 @@ public class CauHinhKyThuatPanel extends JPanel {
         for (Map.Entry<String, JTextField> e : fields.entrySet()) {
             data.put(e.getKey(), e.getValue().getText().trim());
         }
-        try {
-            service.luuNhieuCauHinh(data, nhom, taiKhoan.getTenDangNhap());
-            UIUtils.thongBao(this, "Đã lưu cấu hình " + nhom);
-        } catch (Exception ex) {
-            UIUtils.thongBaoLoi(this, "Lỗi lưu: " + ex.getMessage());
-        }
+        // Lưu CSDL trên luồng nền – không treo UI (SwingWorker)
+        final String nhomFinal = nhom;
+        SwingWorker<Void, Void> w = new SwingWorker<>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                service.luuNhieuCauHinh(data, nhomFinal, taiKhoan.getTenDangNhap());
+                return null;
+            }
+            @Override
+            protected void done() {
+                try {
+                    get();
+                    UIUtils.thongBao(CauHinhKyThuatPanel.this, "Đã lưu cấu hình " + nhomFinal);
+                } catch (Exception ex) {
+                    UIUtils.thongBaoLoi(CauHinhKyThuatPanel.this, "Lỗi lưu: " + ex.getMessage());
+                }
+            }
+        };
+        w.execute();
     }
 }

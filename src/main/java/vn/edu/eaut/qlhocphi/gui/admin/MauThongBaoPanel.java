@@ -172,12 +172,23 @@ public class MauThongBaoPanel extends JPanel {
         m.setTieuDe(txtTieuDe.getText().trim());
         m.setNoiDung(txtNoiDung.getText());
         m.setDangDung(chkDangDung.isSelected());
-        try {
-            service.capNhatMau(m);
-            UIUtils.thongBao(this, "Đã lưu mẫu " + m.getMaLoai());
-            taiDuLieu();
-        } catch (Exception ex) {
-            UIUtils.thongBaoLoi(this, ex.getMessage());
-        }
+        SwingWorker<Void, Void> w = new SwingWorker<>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                service.capNhatMau(m);
+                return null;
+            }
+            @Override
+            protected void done() {
+                try {
+                    get();
+                    UIUtils.thongBao(MauThongBaoPanel.this, "Đã lưu mẫu " + m.getMaLoai());
+                    taiDuLieu();
+                } catch (Exception ex) {
+                    UIUtils.thongBaoLoi(MauThongBaoPanel.this, ex.getMessage());
+                }
+            }
+        };
+        w.execute();
     }
 }

@@ -157,26 +157,39 @@ public class BroadcastPanel extends JPanel {
         JButton btnLuu = new JButton("Lưu");
         btnHuy.addActionListener(e -> dlg.dispose());
         btnLuu.addActionListener(e -> {
-            try {
-                ThongBaoBroadcast b = sua == null ? new ThongBaoBroadcast() : sua;
-                b.setTieuDe(txtTieuDe.getText().trim());
-                b.setNoiDung(txtNd.getText().trim());
-                b.setMucDo((String) cboMuc.getSelectedItem());
-                b.setDangBat(chkBat.isSelected());
-                if (sua == null) {
-                    b.setHienThiTu(LocalDateTime.now());
-                    b.setNguoiTao(taiKhoan.getTenDangNhap());
-                    service.themBroadcast(b);
-                } else {
-                    if (b.getHienThiTu() == null) b.setHienThiTu(LocalDateTime.now());
-                    service.capNhatBroadcast(b);
-                }
-                UIUtils.thongBao(BroadcastPanel.this, "Đã lưu thông báo");
-                dlg.dispose();
-                taiDuLieu();
-            } catch (Exception ex) {
-                UIUtils.thongBaoLoi(dlg, ex.getMessage());
+            ThongBaoBroadcast b = sua == null ? new ThongBaoBroadcast() : sua;
+            b.setTieuDe(txtTieuDe.getText().trim());
+            b.setNoiDung(txtNd.getText().trim());
+            b.setMucDo((String) cboMuc.getSelectedItem());
+            b.setDangBat(chkBat.isSelected());
+            final boolean laThem = (sua == null);
+            if (laThem) {
+                b.setHienThiTu(LocalDateTime.now());
+                b.setNguoiTao(taiKhoan.getTenDangNhap());
+            } else if (b.getHienThiTu() == null) {
+                b.setHienThiTu(LocalDateTime.now());
             }
+            // Ghi CSDL trên luồng nền
+            SwingWorker<Void, Void> w = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    if (laThem) service.themBroadcast(b);
+                    else service.capNhatBroadcast(b);
+                    return null;
+                }
+                @Override
+                protected void done() {
+                    try {
+                        get();
+                        UIUtils.thongBao(BroadcastPanel.this, "Đã lưu thông báo");
+                        dlg.dispose();
+                        taiDuLieu();
+                    } catch (Exception ex) {
+                        UIUtils.thongBaoLoi(dlg, ex.getMessage());
+                    }
+                }
+            };
+            w.execute();
         });
         acts.add(btnHuy);
         acts.add(btnLuu);
@@ -192,11 +205,23 @@ public class BroadcastPanel extends JPanel {
         }
         int ok = JOptionPane.showConfirmDialog(this, "Xóa thông báo này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
         if (ok != JOptionPane.YES_OPTION) return;
-        try {
-            service.xoaBroadcast(danhSach.get(r).getMaBroadcast());
-            taiDuLieu();
-        } catch (Exception ex) {
-            UIUtils.thongBaoLoi(this, ex.getMessage());
-        }
+        final int ma = danhSach.get(r).getMaBroadcast();
+        SwingWorker<Void, Void> w = new SwingWorker<>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                service.xoaBroadcast(ma);
+                return null;
+            }
+            @Override
+            protected void done() {
+                try {
+                    get();
+                    taiDuLieu();
+                } catch (Exception ex) {
+                    UIUtils.thongBaoLoi(BroadcastPanel.this, ex.getMessage());
+                }
+            }
+        };
+        w.execute();
     }
 }
