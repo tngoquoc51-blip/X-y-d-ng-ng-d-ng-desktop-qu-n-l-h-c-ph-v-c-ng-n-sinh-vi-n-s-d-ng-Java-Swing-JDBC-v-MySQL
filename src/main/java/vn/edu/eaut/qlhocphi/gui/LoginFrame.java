@@ -30,7 +30,7 @@ public class LoginFrame extends JFrame {
 
     public LoginFrame() {
         setTitle("Đăng Nhập - Hệ Thống Quản Lý Học Phí");
-        setSize(1040, 680);
+        setSize(900, 680);
         setMinimumSize(new Dimension(820, 600));
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
