@@ -17,6 +17,11 @@ public class SinhVien {
     private String queQuan;
     private String diaChi;
 
+    // Năm học & tín chỉ
+    private int namHoc = 1;
+    private int tinChiTichLuy = 0;
+    private int tinChiNo = 0;
+
     public SinhVien() {}
 
     public SinhVien(String maSV, String hoTen, String lop, String khoa,
@@ -54,6 +59,13 @@ public class SinhVien {
     public void setQueQuan(String queQuan) { this.queQuan = queQuan; }
     public String getDiaChi() { return diaChi; }
     public void setDiaChi(String diaChi) { this.diaChi = diaChi; }
+
+    public int getNamHoc() { return namHoc; }
+    public void setNamHoc(int namHoc) { this.namHoc = namHoc; }
+    public int getTinChiTichLuy() { return tinChiTichLuy; }
+    public void setTinChiTichLuy(int tinChiTichLuy) { this.tinChiTichLuy = tinChiTichLuy; }
+    public int getTinChiNo() { return tinChiNo; }
+    public void setTinChiNo(int tinChiNo) { this.tinChiNo = tinChiNo; }
 
     @Override
     public String toString() { return maSV + " - " + hoTen; }

@@ -11,21 +11,12 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 /**
- * Hop thoai doi mat khau - dung chung cho moi vai tro (Sinh vien / Ke toan / Admin).
- *
- * THIET KE V2: banner mau gradient + icon ve vector (khong dung emoji - tranh loi
- * hien o vuong trong tren may thieu font) dong bo voi phong cach cac trang khac
- * trong he thong, thay vi khung trang don gian nhu ban dau.
- *
- * 2 CHE DO:
- *  - BINH THUONG (macDinh: batBuoc = false): mo tu menu "Doi mat khau", nguoi dung
- *    phai nhap dung mat khau HIEN TAI moi doi duoc, co nut "Huy" de dong khong doi gi.
- *  - BAT BUOC (batBuoc = true): dung ngay sau khi mot sinh vien xac thuc danh tinh
- *    thanh cong qua Google (luong "Quen mat khau"). Khong yeu cau nhap mat khau cu
- *    (vi danh tinh da duoc Google xac nhan roi), KHONG co nut Huy va KHONG cho dong
- *    bang nut X - bat buoc phai dat mat khau moi thi moi tiep tuc vao he thong duoc.
+ * Hop thoai doi mat khau – dung chung moi vai tro.
+ * Giu nguyen 2 che do BINH THUONG / BAT BUOC va toan bo logic.
+ * UI: sky gradient, Segoe UI, o nhap focus sky, dong bo he thong truong.
  */
 public class DoiMatKhauDialog extends JDialog {
+
     private final TaiKhoanService taiKhoanService = new TaiKhoanService();
     private final TaiKhoan taiKhoan;
     private final boolean batBuoc;
@@ -37,99 +28,119 @@ public class DoiMatKhauDialog extends JDialog {
     private JLabel lblThongBao;
     private JButton btnLuu;
 
-    /** Che do binh thuong (co the Huy, phai nhap mat khau cu). */
+    private static final Color SKY_DAM     = new Color(0x02, 0x6A, 0xA8);
+    private static final Color SKY_GIUA    = new Color(0x0E, 0xA5, 0xE9);
+    private static final Color SKY_PRIMARY = new Color(0x02, 0x84, 0xC7);
+    private static final Color BORDER      = new Color(0xE2, 0xE8, 0xF0);
+    private static final Color BORDER_FOCUS = new Color(0x7D, 0xD3, 0xFC);
+    private static final Color MUTED       = new Color(0x64, 0x74, 0x8B);
+    private static final Color TEXT        = new Color(0x0F, 0x17, 0x2A);
+    private static final Color BG_SOFT     = new Color(0xF8, 0xFA, 0xFC);
+
+    private static final Font FONT       = new Font("Segoe UI", Font.PLAIN, 13);
+    private static final Font FONT_BOLD  = new Font("Segoe UI", Font.BOLD, 13);
+    private static final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 18);
+    private static final Font FONT_LABEL = new Font("Segoe UI", Font.BOLD, 12);
+    private static final Font FONT_SMALL = new Font("Segoe UI", Font.PLAIN, 12);
+
     public DoiMatKhauDialog(Window chaMe, TaiKhoan taiKhoan) {
         this(chaMe, taiKhoan, false, null);
     }
 
-    /**
-     * @param batBuoc true = che do bat buoc doi mat khau sau khi xac thuc qua Google
-     *                (khong can mat khau cu, khong the dong/huy).
-     * @param khiDoiThanhCong callback goi ngay sau khi doi mat khau thanh cong va dialog
-     *                        dong lai (dung de MainFrame biet ma mo tiep man hinh chinh).
-     */
     public DoiMatKhauDialog(Window chaMe, TaiKhoan taiKhoan, boolean batBuoc, Runnable khiDoiThanhCong) {
         super(chaMe, batBuoc ? "Bắt buộc đổi mật khẩu" : "Đổi mật khẩu",
                 ModalityType.APPLICATION_MODAL);
         this.taiKhoan = taiKhoan;
         this.batBuoc = batBuoc;
         this.khiDoiThanhCong = khiDoiThanhCong;
-        setSize(460, batBuoc ? 500 : 560);
-        setMinimumSize(new Dimension(420, batBuoc ? 470 : 520));
+
+        setSize(440, batBuoc ? 480 : 540);
+        setMinimumSize(new Dimension(400, batBuoc ? 450 : 500));
         setLocationRelativeTo(chaMe);
         setResizable(false);
-        // Che do bat buoc: khong cho dong bang nut X / Alt+F4 - phai dat mat khau moi.
         setDefaultCloseOperation(batBuoc ? JDialog.DO_NOTHING_ON_CLOSE : JDialog.DISPOSE_ON_CLOSE);
-        getContentPane().setBackground(UITheme.BG_MAIN);
+
+        getContentPane().setBackground(Color.WHITE);
         setLayout(new BorderLayout());
         add(buildBanner(), BorderLayout.NORTH);
         add(buildNoiDung(), BorderLayout.CENTER);
     }
 
-    // ================== Banner tren cung ==================
-
     private JPanel buildBanner() {
-        JPanel banner = UITheme.gradientBanner();
-        banner.setLayout(new BorderLayout(14, 0));
-        banner.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
-        banner.setPreferredSize(new Dimension(10, 90));
+        JPanel banner = new JPanel(new BorderLayout(14, 0)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setPaint(new GradientPaint(0, 0, SKY_DAM, getWidth(), 0, SKY_GIUA));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.setColor(new Color(255, 255, 255, 40));
+                g2.fillRect(0, getHeight() - 1, getWidth(), 1);
+                g2.dispose();
+            }
+        };
+        banner.setOpaque(false);
+        banner.setBorder(BorderFactory.createEmptyBorder(18, 22, 18, 22));
+        banner.setPreferredSize(new Dimension(10, 88));
 
         JPanel trai = new JPanel(new BorderLayout(14, 0));
         trai.setOpaque(false);
         trai.add(khoaIcon(), BorderLayout.WEST);
 
-        JPanel chuText = new JPanel();
-        chuText.setOpaque(false);
-        chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
+        JPanel chu = new JPanel();
+        chu.setOpaque(false);
+        chu.setLayout(new BoxLayout(chu, BoxLayout.Y_AXIS));
+
         JLabel tieuDe = new JLabel(batBuoc ? "Cần đặt mật khẩu mới" : "Đổi mật khẩu");
-        tieuDe.setFont(new Font("Segoe UI", Font.BOLD, 19));
+        tieuDe.setFont(FONT_TITLE);
         tieuDe.setForeground(Color.WHITE);
-        JLabel phu = new JLabel("<html>" + (batBuoc
-                ? "Xác thực Google thành công - hãy đặt mật khẩu mới"
-                : "Tài khoản: " + taiKhoan.getTenDangNhap()) + "</html>");
-        phu.setFont(UITheme.FONT_BASE);
-        phu.setForeground(new Color(255, 255, 255, 210));
-        chuText.add(tieuDe);
-        chuText.add(Box.createRigidArea(new Dimension(0, 4)));
-        chuText.add(phu);
-        trai.add(chuText, BorderLayout.CENTER);
+        tieuDe.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        String phuText = batBuoc
+                ? "Xác thực Google thành công — hãy đặt mật khẩu mới"
+                : "Tài khoản: " + (taiKhoan.getTenDangNhap() != null ? taiKhoan.getTenDangNhap() : "");
+        JLabel phu = new JLabel(phuText);
+        phu.setFont(FONT_SMALL);
+        phu.setForeground(new Color(255, 255, 255, 220));
+        phu.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        chu.add(tieuDe);
+        chu.add(Box.createRigidArea(new Dimension(0, 4)));
+        chu.add(phu);
+        trai.add(chu, BorderLayout.CENTER);
         banner.add(trai, BorderLayout.WEST);
         return banner;
     }
 
-    /** Icon o khoa ve bang Graphics2D thuan vector - khong dung emoji. */
     private JComponent khoaIcon() {
         JComponent badge = new JComponent() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(255, 255, 255, 55));
+                g2.setColor(new Color(255, 255, 255, 50));
                 g2.fillOval(0, 0, getWidth(), getHeight());
+                g2.setColor(new Color(255, 255, 255, 30));
+                g2.fillOval(4, 4, getWidth() - 8, getHeight() - 8);
                 g2.setColor(Color.WHITE);
-                g2.setStroke(new BasicStroke(2.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 int cx = getWidth() / 2, cy = getHeight() / 2;
-                // Than khoa (hinh chu nhat bo tron)
-                g2.drawRoundRect(cx - 9, cy - 2, 18, 15, 5, 5);
-                // Quai khoa (nua vong tron phia tren)
-                g2.drawArc(cx - 6, cy - 14, 12, 16, 0, 180);
-                // Lo khoa
-                g2.fillOval(cx - 1, cy + 3, 2, 2);
+                g2.drawRoundRect(cx - 9, cy - 1, 18, 14, 4, 4);
+                g2.drawArc(cx - 6, cy - 13, 12, 15, 0, 180);
+                g2.fillOval(cx - 2, cy + 4, 4, 4);
                 g2.dispose();
             }
         };
-        badge.setPreferredSize(new Dimension(54, 54));
+        badge.setPreferredSize(new Dimension(52, 52));
         badge.setOpaque(false);
         return badge;
     }
-
-    // ================== Noi dung form ==================
 
     private JPanel buildNoiDung() {
         JPanel wrap = new JPanel();
         wrap.setBackground(Color.WHITE);
         wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
-        wrap.setBorder(new EmptyBorder(24, 28, 22, 28));
+        wrap.setBorder(new EmptyBorder(22, 26, 20, 26));
 
         if (batBuoc) {
             JPanel canhBao = canhBaoBatBuoc();
@@ -142,15 +153,13 @@ public class DoiMatKhauDialog extends JDialog {
         txtMatKhauMoi = oMatKhau();
         txtXacNhan = oMatKhau();
 
-        lblThongBao = new JLabel(" ", SwingConstants.LEFT);
-        lblThongBao.setFont(UITheme.FONT_BASE);
+        lblThongBao = new JLabel(" ");
+        lblThongBao.setFont(FONT_SMALL);
         lblThongBao.setForeground(UITheme.DANGER);
         lblThongBao.setAlignmentX(Component.LEFT_ALIGNMENT);
-        lblThongBao.setBorder(new EmptyBorder(2, 0, 10, 0));
+        lblThongBao.setBorder(new EmptyBorder(4, 2, 10, 0));
 
-        btnLuu = UITheme.primaryButton(batBuoc ? "Đặt mật khẩu mới và tiếp tục" : "Lưu mật khẩu mới");
-        btnLuu.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnLuu.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        btnLuu = taoNutChinh(batBuoc ? "Đặt mật khẩu mới và tiếp tục" : "Lưu mật khẩu mới");
         btnLuu.addActionListener(e -> thucHienDoiMatKhau());
 
         if (!batBuoc) {
@@ -168,9 +177,7 @@ public class DoiMatKhauDialog extends JDialog {
 
         if (!batBuoc) {
             wrap.add(Box.createRigidArea(new Dimension(0, 8)));
-            JButton btnHuy = UITheme.secondaryButton("Hủy");
-            btnHuy.setAlignmentX(Component.LEFT_ALIGNMENT);
-            btnHuy.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+            JButton btnHuy = taoNutPhu("Hủy");
             btnHuy.addActionListener(e -> dispose());
             wrap.add(btnHuy);
         }
@@ -179,51 +186,124 @@ public class DoiMatKhauDialog extends JDialog {
         return wrap;
     }
 
-    /** Dai canh bao mau vang, giai thich vi sao bat buoc doi mat khau. */
     private JPanel canhBaoBatBuoc() {
         JPanel p = new JPanel(new BorderLayout(10, 0)) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(0xFF, 0xF3, 0xE0));
+                g2.setColor(new Color(0xE0, 0xF2, 0xFE));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.setColor(new Color(0x7D, 0xD3, 0xFC));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
                 g2.dispose();
             }
         };
         p.setOpaque(false);
         p.setBorder(new EmptyBorder(12, 14, 12, 14));
-        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
 
         JLabel text = new JLabel("<html>Đây là lần đầu bạn đăng nhập qua Google (hoặc vừa khôi phục mật khẩu)."
-                + "<br>Vì lý do bảo mật, bạn cần đặt một mật khẩu mới trước khi tiếp tục.</html>");
-        text.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        text.setForeground(UITheme.TEXT_PRIMARY);
+                + "<br>Vì lý do bảo mật, bạn cần đặt mật khẩu mới trước khi tiếp tục.</html>");
+        text.setFont(FONT_SMALL);
+        text.setForeground(TEXT);
         p.add(text, BorderLayout.CENTER);
         return p;
     }
 
     private JLabel nhanTruong(String text) {
         JLabel l = new JLabel(text);
-        l.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        l.setForeground(UITheme.TEXT_MUTED);
+        l.setFont(FONT_LABEL);
+        l.setForeground(MUTED);
         l.setAlignmentX(Component.LEFT_ALIGNMENT);
-        l.setBorder(new EmptyBorder(0, 2, 5, 0));
+        l.setBorder(new EmptyBorder(0, 2, 6, 0));
         return l;
     }
 
     private JPasswordField oMatKhau() {
         JPasswordField pf = new JPasswordField();
-        pf.setFont(UITheme.FONT_BASE);
+        pf.setFont(FONT);
         pf.setAlignmentX(Component.LEFT_ALIGNMENT);
-        pf.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        pf.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        pf.setPreferredSize(new Dimension(10, 42));
+        pf.setBackground(BG_SOFT);
+        pf.setForeground(TEXT);
+        pf.setCaretColor(SKY_PRIMARY);
         pf.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UITheme.BORDER, 1, true),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)));
+                BorderFactory.createLineBorder(BORDER, 1, true),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+
+        pf.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                pf.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_FOCUS, 2, true),
+                        BorderFactory.createEmptyBorder(9, 13, 9, 13)));
+                pf.setBackground(Color.WHITE);
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                pf.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER, 1, true),
+                        BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+                pf.setBackground(BG_SOFT);
+            }
+        });
         return pf;
     }
 
-    // ================== Xu ly luu ==================
+    private JButton taoNutChinh(String text) {
+        JButton b = new JButton(text);
+        b.setFont(FONT_BOLD);
+        b.setFocusPainted(false);
+        b.setBorderPainted(false);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setBackground(SKY_PRIMARY);
+        b.setForeground(Color.WHITE);
+        b.setOpaque(true);
+        b.setAlignmentX(Component.LEFT_ALIGNMENT);
+        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        b.setPreferredSize(new Dimension(10, 44));
+        b.setBorder(new EmptyBorder(10, 16, 10, 16));
+        b.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+                if (b.isEnabled()) b.setBackground(SKY_DAM);
+            }
+            @Override public void mouseExited(java.awt.event.MouseEvent e) {
+                if (b.isEnabled()) b.setBackground(SKY_PRIMARY);
+            }
+        });
+        return b;
+    }
+
+    private JButton taoNutPhu(String text) {
+        JButton b = new JButton(text);
+        b.setFont(FONT_BOLD);
+        b.setFocusPainted(false);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setBackground(Color.WHITE);
+        b.setForeground(SKY_PRIMARY);
+        b.setOpaque(true);
+        b.setAlignmentX(Component.LEFT_ALIGNMENT);
+        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        b.setPreferredSize(new Dimension(10, 42));
+        b.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0xBA, 0xE6, 0xFD), 1, true),
+                new EmptyBorder(9, 16, 9, 16)));
+        b.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+                b.setBackground(new Color(0xF0, 0xF9, 0xFF));
+            }
+            @Override public void mouseExited(java.awt.event.MouseEvent e) {
+                b.setBackground(Color.WHITE);
+            }
+        });
+        return b;
+    }
+
+    // ===== LOGIC GIU NGUYEN =====
 
     private void thucHienDoiMatKhau() {
         String matKhauCu = new String(txtMatKhauCu.getPassword());
@@ -259,8 +339,6 @@ public class DoiMatKhauDialog extends JDialog {
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
-                // Ca 2 truong hop deu goi 1 ham duy nhat: doi mat khau VA tu dong bo co
-                // "bat buoc doi mat khau" (neu dang bat) trong cung 1 lan cap nhat CSDL.
                 taiKhoanService.doiMatKhauVaBoCoBatBuoc(taiKhoan.getMaTK(), matKhauMoi);
                 return null;
             }

@@ -9,9 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DAO Sinh viên – tự động mã hóa/giải mã các trường nhạy cảm:
- * Email, SoDienThoai, SoDienThoaiPhuHuynh, QueQuan, DiaChi.
- * Dữ liệu cũ (chưa mã hóa) vẫn đọc được bình thường (không mất dữ liệu).
+ * DAO Sinh viên – tự động mã hóa/giải mã các trường nhạy cảm.
+ * Hỗ trợ thêm NamHoc, TinChiTichLuy, TinChiNo.
  */
 public class SinhVienDAO {
 
@@ -27,7 +26,6 @@ public class SinhVienDAO {
     }
 
     public List<SinhVien> timKiem(String keyword) throws SQLException {
-        // Chỉ tìm trên các trường không mã hóa (MaSV, HoTen, Lop)
         String sql = "SELECT * FROM SinhVien WHERE MaSV LIKE ? OR HoTen LIKE ? OR Lop LIKE ? ORDER BY MaSV";
         List<SinhVien> list = new ArrayList<>();
         String kw = "%" + keyword + "%";
@@ -65,10 +63,6 @@ public class SinhVienDAO {
         }
     }
 
-    /**
-     * Cập nhật sinh viên (tên chuẩn dùng trong Service: capNhat).
-     * Giữ alias sua() để tương thích chỗ gọi cũ (nếu có).
-     */
     public boolean capNhat(SinhVien sv) throws SQLException {
         String sql = "UPDATE SinhVien SET HoTen=?,Lop=?,Khoa=?,NgaySinh=?,Email=?,SoDienThoai=?,"
                 + "TrangThai=?,AnhDaiDien=?,SoDienThoaiPhuHuynh=?,QueQuan=?,DiaChi=? WHERE MaSV=?";
@@ -78,7 +72,6 @@ public class SinhVienDAO {
             ps.setString(2, sv.getLop());
             ps.setString(3, sv.getKhoa());
             ps.setDate(4, sv.getNgaySinh() != null ? Date.valueOf(sv.getNgaySinh()) : null);
-            // Mã hóa các trường nhạy cảm trước khi ghi
             ps.setString(5, EncryptionUtils.encrypt(sv.getEmail()));
             ps.setString(6, EncryptionUtils.encrypt(sv.getSoDienThoai()));
             ps.setBoolean(7, sv.isTrangThai());
@@ -91,7 +84,6 @@ public class SinhVienDAO {
         }
     }
 
-    /** Alias – gọi cùng logic với capNhat (tương thích code cũ dùng tên sua). */
     public boolean sua(SinhVien sv) throws SQLException {
         return capNhat(sv);
     }
@@ -105,7 +97,6 @@ public class SinhVienDAO {
         }
     }
 
-    /** Ghi các trường (có mã hóa) cho INSERT. */
     private void bindEncrypt(PreparedStatement ps, SinhVien sv) throws SQLException {
         ps.setString(1, sv.getMaSV());
         ps.setString(2, sv.getHoTen());
@@ -121,10 +112,6 @@ public class SinhVienDAO {
         ps.setString(12, EncryptionUtils.encrypt(sv.getDiaChi()));
     }
 
-    /**
-     * Đọc từ ResultSet và giải mã các trường nhạy cảm.
-     * Dữ liệu cũ (chưa có prefix ENC:) vẫn trả về nguyên văn → không mất dữ liệu.
-     */
     private SinhVien map(ResultSet rs) throws SQLException {
         SinhVien sv = new SinhVien();
         sv.setMaSV(rs.getString("MaSV"));
@@ -140,6 +127,10 @@ public class SinhVienDAO {
         sv.setSoDienThoaiPhuHuynh(EncryptionUtils.decrypt(rs.getString("SoDienThoaiPhuHuynh")));
         sv.setQueQuan(EncryptionUtils.decrypt(rs.getString("QueQuan")));
         sv.setDiaChi(EncryptionUtils.decrypt(rs.getString("DiaChi")));
+        // Năm học & tín chỉ
+        try { sv.setNamHoc(rs.getInt("NamHoc")); } catch (SQLException ignored) {}
+        try { sv.setTinChiTichLuy(rs.getInt("TinChiTichLuy")); } catch (SQLException ignored) {}
+        try { sv.setTinChiNo(rs.getInt("TinChiNo")); } catch (SQLException ignored) {}
         return sv;
     }
 }

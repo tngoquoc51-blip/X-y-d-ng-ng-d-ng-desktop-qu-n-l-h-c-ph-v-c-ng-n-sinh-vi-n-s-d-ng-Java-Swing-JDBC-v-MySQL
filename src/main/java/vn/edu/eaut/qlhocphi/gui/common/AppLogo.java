@@ -23,7 +23,7 @@ public final class AppLogo {
     }
 
     public static JComponent taoSidebar() {
-        return tao(44);
+        return tao(64);   // hoặc 72
     }
 
     public static JComponent tao(int size) {

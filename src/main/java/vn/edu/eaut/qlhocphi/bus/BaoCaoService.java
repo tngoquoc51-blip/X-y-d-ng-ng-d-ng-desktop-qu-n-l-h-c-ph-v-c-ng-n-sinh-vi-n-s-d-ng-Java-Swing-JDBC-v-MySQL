@@ -1,4 +1,3 @@
-
 package vn.edu.eaut.qlhocphi.bus;
 
 import vn.edu.eaut.qlhocphi.dal.HoaDonDAO;
@@ -20,28 +19,26 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Báo cáo / thống kê – hỗ trợ vận hành 5 năm (biểu đồ tháng theo năm + biểu đồ năm).
+ * Báo cáo thống kê – khung vận hành 5 năm.
+ * Doanh thu lấy từ phiếu thu (sinh viên đóng học phí).
  */
 public class BaoCaoService {
+    public static final int SO_NAM_VAN_HANH = 5;
+
     private final HoaDonDAO hoaDonDAO = new HoaDonDAO();
     private final PhieuThuDAO phieuThuDAO = new PhieuThuDAO();
 
-    /** Số năm hệ thống cần hỗ trợ báo cáo (yêu cầu đồ án). */
-    public static final int SO_NAM_VAN_HANH = 5;
-
     public Map<String, BigDecimal> thongKeThuTheoHocKy() throws SQLException {
-        List<HoaDonHocPhi> dsHoaDon = hoaDonDAO.layTatCa();
-        return dsHoaDon.stream()
+        return hoaDonDAO.layTatCa().stream()
                 .collect(Collectors.groupingBy(
-                        HoaDonHocPhi::getTenHocKy,
+                        hd -> hd.getTenHocKy() != null ? hd.getTenHocKy() : "Khác",
                         LinkedHashMap::new,
                         Collectors.reducing(BigDecimal.ZERO, HoaDonHocPhi::getDaNop, BigDecimal::add)
                 ));
     }
 
     public Map<TrangThaiHoaDon, Long> thongKeSoLuongTheoTrangThai() throws SQLException {
-        List<HoaDonHocPhi> dsHoaDon = hoaDonDAO.layTatCa();
-        return dsHoaDon.stream()
+        return hoaDonDAO.layTatCa().stream()
                 .collect(Collectors.groupingBy(HoaDonHocPhi::tinhTrangThai, Collectors.counting()));
     }
 
@@ -50,29 +47,29 @@ public class BaoCaoService {
     }
 
     /**
-     * Thu theo tháng.
-     * @param nam null = 12 tháng × 5 năm gần nhất (key: yyyy-MM);
-     *            có giá trị = đủ T1…T12 của năm đó (key: T1…T12).
+     * Doanh thu theo tháng từ phiếu thu.
+     * nam = null → 12 tháng × 5 năm (key yyyy-MM).
+     * nam = 2024 → đủ T1…T12 năm đó (kể cả 0đ).
      */
     public Map<String, BigDecimal> thongKeThuTheoThang(Integer nam) throws SQLException {
         List<PhieuThu> all = layTatCaPhieuThu();
         Map<String, BigDecimal> ketQua = new LinkedHashMap<>();
 
         if (nam != null) {
-            for (int m = 1; m <= 12; m++) ketQua.put("T" + m, BigDecimal.ZERO);
+            for (int m = 1; m <= 12; m++) {
+                ketQua.put("T" + m, BigDecimal.ZERO);
+            }
             for (PhieuThu pt : all) {
                 LocalDateTime ngay = pt.getNgayNop();
                 if (ngay == null || ngay.getYear() != nam) continue;
-                String key = "T" + ngay.getMonthValue();
-                ketQua.merge(key, soTien(pt), BigDecimal::add);
+                ketQua.merge("T" + ngay.getMonthValue(), soTien(pt), BigDecimal::add);
             }
             return ketQua;
         }
 
-        // 5 năm × 12 tháng (đủ khung thời gian vận hành)
-        int namHienTai = LocalDate.now().getYear();
-        int namBatDau = namHienTai - SO_NAM_VAN_HANH + 1;
-        for (int y = namBatDau; y <= namHienTai; y++) {
+        int namHt = LocalDate.now().getYear();
+        int namBd = namHt - SO_NAM_VAN_HANH + 1;
+        for (int y = namBd; y <= namHt; y++) {
             for (int m = 1; m <= 12; m++) {
                 ketQua.put(String.format("%04d-%02d", y, m), BigDecimal.ZERO);
             }
@@ -80,50 +77,42 @@ public class BaoCaoService {
         for (PhieuThu pt : all) {
             LocalDateTime ngay = pt.getNgayNop();
             if (ngay == null) continue;
-            if (ngay.getYear() < namBatDau || ngay.getYear() > namHienTai) continue;
-            String key = YearMonth.from(ngay).toString();
-            ketQua.merge(key, soTien(pt), BigDecimal::add);
+            int y = ngay.getYear();
+            if (y < namBd || y > namHt) continue;
+            ketQua.merge(YearMonth.from(ngay).toString(), soTien(pt), BigDecimal::add);
         }
         return ketQua;
     }
 
-    /**
-     * Tổng thu theo từng năm trong khung 5 năm vận hành (đủ năm kể cả 0đ).
-     * Key: "2022", "2023"… năm hiện tại.
-     */
+    /** Tổng thu từng năm trong 5 năm (đủ cột kể cả 0đ). */
     public Map<String, BigDecimal> thongKeThuTheoNam() throws SQLException {
         List<PhieuThu> all = layTatCaPhieuThu();
         Map<String, BigDecimal> ketQua = new LinkedHashMap<>();
-        int namHienTai = LocalDate.now().getYear();
-        int namBatDau = namHienTai - SO_NAM_VAN_HANH + 1;
-        for (int y = namBatDau; y <= namHienTai; y++) {
+        int namHt = LocalDate.now().getYear();
+        int namBd = namHt - SO_NAM_VAN_HANH + 1;
+        for (int y = namBd; y <= namHt; y++) {
             ketQua.put(String.valueOf(y), BigDecimal.ZERO);
         }
         for (PhieuThu pt : all) {
             LocalDateTime ngay = pt.getNgayNop();
             if (ngay == null) continue;
             int y = ngay.getYear();
-            if (y < namBatDau || y > namHienTai) continue;
+            if (y < namBd || y > namHt) continue;
             ketQua.merge(String.valueOf(y), soTien(pt), BigDecimal::add);
         }
         return ketQua;
     }
 
-    /**
-     * Danh sách 5 năm vận hành (mới → cũ) để đổ combo lọc.
-     * Luôn đủ 5 năm kể cả năm chưa có phiếu thu.
-     */
     public List<Integer> layDanhSachNamVanHanh() {
         List<Integer> ds = new ArrayList<>();
-        int namHienTai = LocalDate.now().getYear();
+        int namHt = LocalDate.now().getYear();
         for (int i = 0; i < SO_NAM_VAN_HANH; i++) {
-            ds.add(namHienTai - i);
+            ds.add(namHt - i);
         }
         return ds;
     }
 
-    /** Tương thích code cũ. */
-    public List<Integer> layDanhSachNamCoDuLieu() throws SQLException {
+    public List<Integer> layDanhSachNamCoDuLieu() {
         return layDanhSachNamVanHanh();
     }
 
@@ -145,12 +134,12 @@ public class BaoCaoService {
     }
 
     public BaoCaoTongQuan layTongQuan() throws SQLException {
-        List<HoaDonHocPhi> dsHoaDon = hoaDonDAO.layTatCa();
-        BigDecimal tongHocPhi = dsHoaDon.stream().map(HoaDonHocPhi::getSoTien).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal tongDaThu = dsHoaDon.stream().map(HoaDonHocPhi::getDaNop).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal tongConNo = dsHoaDon.stream().map(HoaDonHocPhi::tinhConNo).reduce(BigDecimal.ZERO, BigDecimal::add);
-        long soHoaDonQuaHan = dsHoaDon.stream().filter(hd -> hd.tinhTrangThai() == TrangThaiHoaDon.QUA_HAN).count();
-        return new BaoCaoTongQuan(dsHoaDon.size(), tongHocPhi, tongDaThu, tongConNo, soHoaDonQuaHan);
+        List<HoaDonHocPhi> ds = hoaDonDAO.layTatCa();
+        BigDecimal tongHp = ds.stream().map(HoaDonHocPhi::getSoTien).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal daThu = ds.stream().map(HoaDonHocPhi::getDaNop).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal conNo = ds.stream().map(HoaDonHocPhi::tinhConNo).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long quaHan = ds.stream().filter(hd -> hd.tinhTrangThai() == TrangThaiHoaDon.QUA_HAN).count();
+        return new BaoCaoTongQuan(ds.size(), tongHp, daThu, conNo, quaHan);
     }
 
     private List<PhieuThu> layTatCaPhieuThu() throws SQLException {
@@ -167,9 +156,7 @@ public class BaoCaoService {
 
     public static class BaoCaoTongQuan {
         private final int tongSoHoaDon;
-        private final BigDecimal tongHocPhi;
-        private final BigDecimal tongDaThu;
-        private final BigDecimal tongConNo;
+        private final BigDecimal tongHocPhi, tongDaThu, tongConNo;
         private final long soHoaDonQuaHan;
 
         public BaoCaoTongQuan(int tongSoHoaDon, BigDecimal tongHocPhi, BigDecimal tongDaThu,

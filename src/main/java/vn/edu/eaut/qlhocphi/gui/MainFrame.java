@@ -77,7 +77,11 @@ public class MainFrame extends JFrame {
             content.add(new vn.edu.eaut.qlhocphi.gui.sinhvien.HocTapTinChiPanel(taiKhoan), "tinchi");
             content.add(new ChatbotPanel(), "chatbot");
             content.add(new ThongTinCaNhanPanel(taiKhoan), "thongtin");
-            content.add(new vn.edu.eaut.qlhocphi.gui.sinhvien.ThongBaoSinhVienPanel(taiKhoan, this::capNhatBadgeThongBao), "thongbao_sv");
+            content.add(new vn.edu.eaut.qlhocphi.gui.sinhvien.ThongBaoSinhVienPanel(
+                    taiKhoan,
+                    this::capNhatBadgeThongBao,
+                    this::chuyenMan
+            ), "thongbao_sv");
             add(content, BorderLayout.CENTER);
             chuyenMan("tongquan");
             lichSuRieng.tuTaiDuLieu();
@@ -187,7 +191,7 @@ public class MainFrame extends JFrame {
             }
         };
         header.setOpaque(false);
-        header.setPreferredSize(new Dimension(10, 64));
+        header.setPreferredSize(new Dimension(10, 72));
         header.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
         if (waveTimer != null) waveTimer.stop();
@@ -203,25 +207,36 @@ public class MainFrame extends JFrame {
 
         JPanel trai = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         trai.setOpaque(false);
-        // Không gắn logo hệ thống ở đây – logo chỉ hiện ở sidebar
         trai.add(UITheme.avatarTron(taiKhoan.getHoTen()));
 
         JPanel chuText = new JPanel();
         chuText.setOpaque(false);
         chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
 
-        JLabel lblTieuDe = new JLabel("Hệ Thống Quản Lý Học Phí Và Công Nợ Sinh Viên");
+// Dòng 1: tên hệ thống
+        JLabel lblTieuDe = new JLabel("Hệ thống Quản lý Học phí và Công nợ Sinh viên");
         lblTieuDe.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        lblTieuDe.setForeground(new Color(255, 255, 255, 245));
+        lblTieuDe.setForeground(new Color(255, 255, 255, 200));
         lblTieuDe.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel lblUser = new JLabel("Xin Chào, " + taiKhoan.getHoTen() + "  (" + tenVaiTroHienThi(taiKhoan.getVaiTro()) + ")");
+// Dòng 2: chỉ họ tên (không ghi vai trò trong ngoặc)
+        JLabel lblUser = new JLabel("Xin chào, " + taiKhoan.getHoTen());
         lblUser.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblUser.setForeground(Color.WHITE);
         lblUser.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+// Dòng 3: đơn vị / vai trò
+        JLabel lblDonVi = new JLabel(dongDonVi(taiKhoan));
+        lblDonVi.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblDonVi.setForeground(new Color(255, 255, 255, 220));
+        lblDonVi.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         chuText.add(lblTieuDe);
+        chuText.add(Box.createRigidArea(new Dimension(0, 2)));
         chuText.add(lblUser);
+        chuText.add(Box.createRigidArea(new Dimension(0, 1)));
+        chuText.add(lblDonVi);
+
         trai.add(chuText);
         header.add(trai, BorderLayout.WEST);
 
@@ -277,10 +292,10 @@ public class MainFrame extends JFrame {
         logoBox.setOpaque(false);
         logoBox.setLayout(new BoxLayout(logoBox, BoxLayout.Y_AXIS));
         logoBox.setAlignmentX(Component.LEFT_ALIGNMENT);
-        logoBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
+        logoBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
         logoBox.setBorder(BorderFactory.createEmptyBorder(8, 12, 12, 12));
 
-        JComponent logoIcon = AppLogo.tao(72);  // to hon
+        JComponent logoIcon = AppLogo.tao(165);  // ~1.5 x 110
         logoIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel logoText = new JLabel("Quản Lý Nợ Công Sinh Viên");
@@ -446,22 +461,41 @@ public class MainFrame extends JFrame {
     }
 
     private void themNutDoiMatKhau(JPanel sidebar) {
-        JButton btn = new JButton("Đổi Mật Khẩu", taoIconMau(UITheme.SIDEBAR_GRAY, "KEY"));
-        btn.setIconTextGap(12);
+        MenuButtonCoBadge btn = new MenuButtonCoBadge("Đổi Mật Khẩu", taoIconMau(UITheme.SIDEBAR_GRAY, "KEY"));
+        btn.setUI(new BasicButtonUI());
+        btn.setIconTextGap(14);
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
+        btn.setPreferredSize(new Dimension(240, 48));
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setFont(UITheme.FONT_BASE);
-        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        btn.setForeground(new Color(0xFF, 0xFF, 0xFF));
         btn.setBackground(new Color(0, 0, 0, 0));
-        btn.setBorder(BorderFactory.createEmptyBorder(11, 22, 11, 12));
+        btn.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 12));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
         btn.setOpaque(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
+        btn.setRolloverEnabled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(e -> new DoiMatKhauDialog(this, taiKhoan).setVisible(true));
+
+        btn.addActionListener(e -> {
+            // Highlight giống các mục menu khác
+            Color activeBg = new Color(255, 255, 255, 245);
+            Color activeFg = UITheme.PRIMARY_DARK;
+            Color idleFg = new Color(0xFF, 0xFF, 0xFF);
+            for (Map.Entry<String, MenuButtonCoBadge> entry : menuButtons.entrySet()) {
+                boolean active = "doimatkhau".equals(entry.getKey());
+                entry.getValue().setBackground(active ? activeBg : new Color(0, 0, 0, 0));
+                entry.getValue().setForeground(active ? activeFg : idleFg);
+                entry.getValue().setOpaque(active);
+            }
+            // Mo dialog
+            new DoiMatKhauDialog(this, taiKhoan).setVisible(true);
+        });
+
         sidebar.add(btn);
+        menuButtons.put("doimatkhau", btn);  // de quan ly highlight
     }
 
     private void chuyenMan(String key) {
@@ -532,6 +566,22 @@ public class MainFrame extends JFrame {
             case PHONGDAOTAO -> "Phòng Đào Tạo";
             case KETOAN -> "Kế Toán";
             case SINHVIEN -> "Sinh Viên";
+        };
+    }
+
+    /** Dòng đơn vị dưới câu chào – chuẩn hệ thống trường */
+    private static String dongDonVi(TaiKhoan tk) {
+        if (tk == null || tk.getVaiTro() == null) return "";
+        return switch (tk.getVaiTro()) {
+            case ADMIN -> "Quản trị hệ thống";
+            case PHONGDAOTAO -> "Phòng Đào tạo";
+            case KETOAN -> "Phòng Kế toán";
+            case SINHVIEN -> {
+                String ma = tk.getMaSV();
+                yield (ma != null && !ma.isBlank())
+                        ? "Sinh viên · Mã SV: " + ma
+                        : "Sinh viên";
+            }
         };
     }
 
