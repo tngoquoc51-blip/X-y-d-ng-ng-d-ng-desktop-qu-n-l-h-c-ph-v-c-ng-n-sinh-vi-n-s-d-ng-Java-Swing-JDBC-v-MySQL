@@ -100,17 +100,21 @@ public class SinhVienCongNoPanel extends JPanel {
     }
 
     // ===================== BANNER =====================
+    // ===================== BANNER =====================
     private JPanel buildBanner() {
         GradientBannerPanel banner = new GradientBannerPanel();
         banner.setLayout(new BorderLayout());
-        banner.setPreferredSize(new Dimension(10, 96));
-        banner.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
+        banner.setPreferredSize(new Dimension(10, 120));
+        banner.setMinimumSize(new Dimension(10, 110));
+        banner.setBorder(BorderFactory.createEmptyBorder(18, 28, 18, 28));
 
-        avatarComponent = new vn.edu.eaut.qlhocphi.gui.common.AvatarComponent(taiKhoan.getHoTen(), 52);
+        // Avatar to hơn, cân với 3 dòng chữ
+        avatarComponent = new vn.edu.eaut.qlhocphi.gui.common.AvatarComponent(taiKhoan.getHoTen(), 72);
 
         JPanel textBox = new JPanel();
         textBox.setOpaque(false);
         textBox.setLayout(new BoxLayout(textBox, BoxLayout.Y_AXIS));
+        textBox.setAlignmentY(Component.CENTER_ALIGNMENT);
 
         JLabel lblChao = new JLabel(loiChao());
         lblChao.setFont(UITheme.FONT_BASE);
@@ -118,24 +122,39 @@ public class SinhVienCongNoPanel extends JPanel {
         lblChao.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         lblTenSV = new JLabel(taiKhoan.getHoTen());
-        lblTenSV.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTenSV.setFont(new Font("Segoe UI", Font.BOLD, 20));
         lblTenSV.setForeground(Color.WHITE);
         lblTenSV.setAlignmentX(Component.LEFT_ALIGNMENT);
-        lblTenSV.setBorder(BorderFactory.createEmptyBorder(2, 0, 4, 0));
+        lblTenSV.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 
         JLabel lblNgay = new JLabel(dinhDangNgayHomNay());
         lblNgay.setFont(UITheme.FONT_BASE);
-        lblNgay.setForeground(new Color(255, 255, 255, 200));
+        lblNgay.setForeground(new Color(255, 255, 255, 230));
         lblNgay.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         textBox.add(lblChao);
+        textBox.add(Box.createVerticalStrut(2));
         textBox.add(lblTenSV);
+        textBox.add(Box.createVerticalStrut(2));
         textBox.add(lblNgay);
 
-        JPanel trai = new JPanel(new BorderLayout(14, 0));
+        // Hàng ngang: avatar + chữ, căn giữa theo chiều dọc
+        JPanel trai = new JPanel();
         trai.setOpaque(false);
-        trai.add(avatarComponent, BorderLayout.WEST);
-        trai.add(textBox, BorderLayout.CENTER);
+        trai.setLayout(new BoxLayout(trai, BoxLayout.X_AXIS));
+
+        JPanel bocAvatar = new JPanel(new BorderLayout());
+        bocAvatar.setOpaque(false);
+        bocAvatar.setPreferredSize(new Dimension(72, 72));
+        bocAvatar.setMaximumSize(new Dimension(72, 72));
+        bocAvatar.setMinimumSize(new Dimension(72, 72));
+        bocAvatar.setAlignmentY(Component.CENTER_ALIGNMENT);
+        bocAvatar.add(avatarComponent, BorderLayout.CENTER);
+
+        trai.add(bocAvatar);
+        trai.add(Box.createRigidArea(new Dimension(18, 0)));
+        trai.add(textBox);
+
         banner.add(trai, BorderLayout.WEST);
 
         lblPillNhacNo = UITheme.pill("0 nhắc nợ", new Color(255, 255, 255, 45), Color.WHITE);

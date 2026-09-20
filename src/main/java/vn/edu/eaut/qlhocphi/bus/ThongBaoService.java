@@ -56,6 +56,10 @@ public class ThongBaoService {
         dao.danhDauDaDocMot(taiKhoan.getMaTK(), maThongBao);
     }
 
+    public List<ThongBao> layHopThuTheoVaiTro(TaiKhoan taiKhoan, String manHinhKey) throws SQLException {
+        return dao.layTatCaTheoVaiTro(taiKhoan.getMaTK(), taiKhoan.getVaiTro().toString(), manHinhKey);
+    }
+
     public void danhDauTatCaDaDocSinhVien(TaiKhoan taiKhoan) throws SQLException {
         dao.danhDauTatCaDaDocSinhVien(taiKhoan.getMaTK(), taiKhoan.getMaSV());
     }

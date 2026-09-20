@@ -5,46 +5,54 @@ import vn.edu.eaut.qlhocphi.model.SinhVien;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 
 /**
- * Panel dieu huong dang 2 NUT XO (JComboBox) rieng biet: 1 nut chon Khoa, 1
- * nut chon Lop. Mac dinh Lop bi khoa (disable) cho toi khi da chon 1 Khoa cu
- * the. Du lieu sinh vien CHI hien len bang khi da chon xong CA Khoa LAN Lop -
- * chua chon du ca 2 thi bang van an, dung yeu cau.
+ * Điều hướng 3 cấp: Khoa → Năm học → Lớp (chuẩn quản lý SV đại học).
  */
 public class KhoaLopNavPanel extends JPanel {
 
-    private static final String CHON_KHOA = "-- Chon Khoa --";
-    private static final String CHON_LOP = "-- Chon Lop --";
-    private static final String TAT_CA_SV = "\u2605 Tat ca sinh vien (moi Khoa)";
+    private static final String CHON_KHOA = "-- Chọn Khoa --";
+    private static final String CHON_NAM = "-- Chọn Năm học --";
+    private static final String CHON_LOP = "-- Chọn Lớp --";
+    private static final String TAT_CA_SV = "★ Tất cả sinh viên";
+    private static final String TAT_CA_NAM = "Tất cả năm";
+    private static final String TAT_CA_LOP = "Tất cả lớp";
 
-    /** Ket qua 1 lan chon: null (truyen ve callback) = "chua chon du Khoa+Lop" (an du lieu). */
     public static class LuaChon {
         public final String khoa;
-        public final String lop;
-        public LuaChon(String khoa, String lop) { this.khoa = khoa; this.lop = lop; }
-        public static final LuaChon TAT_CA = new LuaChon("__TAT_CA__", null);
+        public final Integer namHoc; // null = tất cả năm
+        public final String lop;     // null = tất cả lớp
+
+        public LuaChon(String khoa, Integer namHoc, String lop) {
+            this.khoa = khoa;
+            this.namHoc = namHoc;
+            this.lop = lop;
+        }
+
+        public static final LuaChon TAT_CA = new LuaChon("__TAT_CA__", null, null);
     }
 
     private final JComboBox<String> cboKhoa = new JComboBox<>();
+    private final JComboBox<String> cboNam = new JComboBox<>();
     private final JComboBox<String> cboLop = new JComboBox<>();
+    private final JLabel lblThongKe = new JLabel(" ");
     private Consumer<LuaChon> khiChon;
 
-    /** Khoa -> danh sach ten Lop cua Khoa do - dung de nap lai cboLop moi khi doi Khoa. */
-    private final Map<String, List<String>> banDoKhoaLop = new LinkedHashMap<>();
-    private boolean dangNapDuLieu = false; // chan khong cho fire su kien khi dang set item bang code
+    private final Map<String, Map<Integer, TreeSet<String>>> banDo = new LinkedHashMap<>();
+    private final Map<String, Map<Integer, Integer>> demSV = new LinkedHashMap<>();
+    private boolean dangNap = false;
 
     public KhoaLopNavPanel() {
         setLayout(new BorderLayout(0, 10));
         setOpaque(false);
 
-        JLabel tieuDe = new JLabel("DIEU HUONG THEO KHOA / LOP");
+        JLabel tieuDe = new JLabel("ĐIỀU HƯỚNG KHOA / NĂM / LỚP");
         tieuDe.setFont(new Font("Segoe UI", Font.BOLD, 11));
         tieuDe.setForeground(UITheme.TEXT_MUTED);
         add(tieuDe, BorderLayout.NORTH);
@@ -53,133 +61,209 @@ public class KhoaLopNavPanel extends JPanel {
         box.setOpaque(false);
         box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
 
-        JLabel lblKhoa = nhanNho("Khoa");
-        box.add(lblKhoa);
+        box.add(nhanNho("1. Khoa"));
         box.add(Box.createRigidArea(new Dimension(0, 4)));
         styleCombo(cboKhoa, UITheme.PRIMARY);
         box.add(cboKhoa);
 
-        box.add(Box.createRigidArea(new Dimension(0, 16)));
+        box.add(Box.createRigidArea(new Dimension(0, 12)));
+        box.add(nhanNho("2. Năm học"));
+        box.add(Box.createRigidArea(new Dimension(0, 4)));
+        styleCombo(cboNam, new Color(0x0E, 0xA5, 0xE9));
+        box.add(cboNam);
 
-        JLabel lblLop = nhanNho("Lop");
-        box.add(lblLop);
+        box.add(Box.createRigidArea(new Dimension(0, 12)));
+        box.add(nhanNho("3. Lớp"));
         box.add(Box.createRigidArea(new Dimension(0, 4)));
         styleCombo(cboLop, UITheme.ACCENT_TEAL);
-        cboLop.setEnabled(false); // Lop bi khoa cho toi khi da chon Khoa
         box.add(cboLop);
+
+        box.add(Box.createRigidArea(new Dimension(0, 14)));
+        lblThongKe.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblThongKe.setForeground(UITheme.TEXT_MUTED);
+        lblThongKe.setAlignmentX(Component.LEFT_ALIGNMENT);
+        box.add(lblThongKe);
 
         add(box, BorderLayout.CENTER);
 
-        cboKhoa.addActionListener(e -> { if (!dangNapDuLieu) xuLyDoiKhoa(); });
-        cboLop.addActionListener(e -> { if (!dangNapDuLieu) xuLyDoiLop(); });
+        cboNam.setEnabled(false);
+        cboLop.setEnabled(false);
+
+        cboKhoa.addActionListener(e -> { if (!dangNap) xuLyDoiKhoa(); });
+        cboNam.addActionListener(e -> { if (!dangNap) xuLyDoiNam(); });
+        cboLop.addActionListener(e -> { if (!dangNap) xuLyDoiLop(); });
     }
 
     public void setKhiChon(Consumer<LuaChon> khiChon) {
         this.khiChon = khiChon;
     }
 
-    /** Xay lai danh sach Khoa (va ban do Khoa->Lop) tu du lieu sinh vien hien co. */
     public void capNhatDuLieu(List<SinhVien> danhSach) {
-        String khoaDangChon = (String) cboKhoa.getSelectedItem();
-        String lopDangChon = (String) cboLop.getSelectedItem();
-
-        Map<String, List<String>> gomNhom = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        banDo.clear();
+        demSV.clear();
         if (danhSach != null) {
             for (SinhVien sv : danhSach) {
-                String khoa = trongRong(sv.getKhoa()) ? "(Chua phan khoa)" : sv.getKhoa().trim();
-                String lop = trongRong(sv.getLop()) ? "(Chua phan lop)" : sv.getLop().trim();
-                gomNhom.computeIfAbsent(khoa, k -> new ArrayList<>());
-                if (!gomNhom.get(khoa).contains(lop)) gomNhom.get(khoa).add(lop);
+                String khoa = (sv.getKhoa() == null || sv.getKhoa().isBlank())
+                        ? "(Chưa phân khoa)" : sv.getKhoa().trim();
+                int nam = sv.getNamHoc() > 0 ? sv.getNamHoc() : 1;
+                String lop = (sv.getLop() == null || sv.getLop().isBlank())
+                        ? "(Chưa phân lớp)" : sv.getLop().trim();
+
+                banDo.computeIfAbsent(khoa, k -> new TreeMap<>())
+                        .computeIfAbsent(nam, n -> new TreeSet<>())
+                        .add(lop);
+                demSV.computeIfAbsent(khoa, k -> new TreeMap<>())
+                        .merge(nam, 1, Integer::sum);
             }
         }
-        for (List<String> ds : gomNhom.values()) ds.sort(String.CASE_INSENSITIVE_ORDER);
 
-        banDoKhoaLop.clear();
-        banDoKhoaLop.putAll(gomNhom);
-
-        dangNapDuLieu = true;
+        dangNap = true;
         try {
             cboKhoa.removeAllItems();
             cboKhoa.addItem(CHON_KHOA);
             cboKhoa.addItem(TAT_CA_SV);
-            for (String khoa : banDoKhoaLop.keySet()) cboKhoa.addItem(khoa);
+            for (String k : banDo.keySet()) cboKhoa.addItem(k);
 
-            if (khoaDangChon != null && banDoKhoaLop.containsKey(khoaDangChon)) {
-                cboKhoa.setSelectedItem(khoaDangChon);
-                napComboLop(khoaDangChon);
-                if (lopDangChon != null && banDoKhoaLop.get(khoaDangChon).contains(lopDangChon)) {
-                    cboLop.setSelectedItem(lopDangChon);
-                }
-            } else {
-                cboKhoa.setSelectedItem(CHON_KHOA);
-                napComboLop(null);
-            }
-        } finally {
-            dangNapDuLieu = false;
-        }
-    }
+            cboNam.removeAllItems();
+            cboNam.addItem(CHON_NAM);
+            cboNam.setEnabled(false);
 
-    private boolean trongRong(String s) {
-        return s == null || s.trim().isEmpty();
-    }
-
-    /** Nap lai cboLop theo Khoa dang chon. Neu khoa == null, Lop bi khoa (disable) va rong. */
-    private void napComboLop(String khoa) {
-        cboLop.removeAllItems();
-        cboLop.addItem(CHON_LOP);
-        if (khoa != null && banDoKhoaLop.containsKey(khoa)) {
-            for (String lop : banDoKhoaLop.get(khoa)) cboLop.addItem(lop);
-            cboLop.setEnabled(true);
-        } else {
+            cboLop.removeAllItems();
+            cboLop.addItem(CHON_LOP);
             cboLop.setEnabled(false);
+
+            lblThongKe.setText("Chọn Khoa để xem năm / lớp");
+        } finally {
+            dangNap = false;
         }
-        cboLop.setSelectedItem(CHON_LOP);
     }
 
     private void xuLyDoiKhoa() {
         String khoa = (String) cboKhoa.getSelectedItem();
 
-        // Chon "Tat ca sinh vien": bo qua yeu cau phai chon them Lop, hien du lieu NGAY LAP TUC -
-        // day la tinh nang moi cho phep Admin xem toan bo sinh vien moi Khoa cung 1 luc.
         if (TAT_CA_SV.equals(khoa)) {
-            dangNapDuLieu = true;
+            dangNap = true;
             try {
-                napComboLop(null); // Lop khong con y nghia trong che do "Tat ca" -> khoa lai cho ro rang
+                cboNam.removeAllItems();
+                cboNam.addItem(CHON_NAM);
+                cboNam.setEnabled(false);
+                cboLop.removeAllItems();
+                cboLop.addItem(CHON_LOP);
+                cboLop.setEnabled(false);
             } finally {
-                dangNapDuLieu = false;
+                dangNap = false;
             }
+            lblThongKe.setText("Đang xem: toàn bộ sinh viên");
             if (khiChon != null) khiChon.accept(LuaChon.TAT_CA);
             return;
         }
 
-        boolean coKhoaThat = khoa != null && !CHON_KHOA.equals(khoa) && !TAT_CA_SV.equals(khoa);
-
-        dangNapDuLieu = true;
+        boolean coKhoa = khoa != null && !CHON_KHOA.equals(khoa);
+        dangNap = true;
         try {
-            napComboLop(coKhoaThat ? khoa : null);
+            cboNam.removeAllItems();
+            cboNam.addItem(CHON_NAM);
+            if (coKhoa) {
+                cboNam.addItem(TAT_CA_NAM);
+                Map<Integer, TreeSet<String>> theoNam = banDo.getOrDefault(khoa, Map.of());
+                for (Integer n : theoNam.keySet()) {
+                    int so = demSV.getOrDefault(khoa, Map.of()).getOrDefault(n, 0);
+                    cboNam.addItem("Năm " + n + "  (" + so + " SV)");
+                }
+                cboNam.setEnabled(true);
+            } else {
+                cboNam.setEnabled(false);
+            }
+            cboLop.removeAllItems();
+            cboLop.addItem(CHON_LOP);
+            cboLop.setEnabled(false);
         } finally {
-            dangNapDuLieu = false;
+            dangNap = false;
         }
-        // Vua doi Khoa xong, Lop bi reset ve rong -> chua du dieu kien de hien du lieu.
-        baoAn();
+        lblThongKe.setText(coKhoa ? "Chọn Năm học của khoa " + khoa : "Chọn Khoa để tiếp tục");
+        if (khiChon != null) khiChon.accept(null);
+    }
+
+    private void xuLyDoiNam() {
+        String khoa = (String) cboKhoa.getSelectedItem();
+        String namStr = (String) cboNam.getSelectedItem();
+        boolean coKhoa = khoa != null && !CHON_KHOA.equals(khoa) && !TAT_CA_SV.equals(khoa);
+        boolean coNam = namStr != null && !CHON_NAM.equals(namStr);
+
+        if (!coKhoa || !coNam) {
+            cboLop.setEnabled(false);
+            if (khiChon != null) khiChon.accept(null);
+            return;
+        }
+
+        if (TAT_CA_NAM.equals(namStr)) {
+            dangNap = true;
+            try {
+                cboLop.removeAllItems();
+                cboLop.addItem(CHON_LOP);
+                cboLop.addItem(TAT_CA_LOP);
+                Map<Integer, TreeSet<String>> theoNam = banDo.getOrDefault(khoa, Map.of());
+                TreeSet<String> allLop = new TreeSet<>();
+                for (TreeSet<String> s : theoNam.values()) allLop.addAll(s);
+                for (String l : allLop) cboLop.addItem(l);
+                cboLop.setEnabled(true);
+            } finally {
+                dangNap = false;
+            }
+            lblThongKe.setText("Khoa " + khoa + " · Tất cả năm");
+            if (khiChon != null) khiChon.accept(new LuaChon(khoa, null, null));
+            return;
+        }
+
+        Integer nam = trichNam(namStr);
+        dangNap = true;
+        try {
+            cboLop.removeAllItems();
+            cboLop.addItem(CHON_LOP);
+            cboLop.addItem(TAT_CA_LOP);
+            TreeSet<String> lops = banDo.getOrDefault(khoa, Map.of())
+                    .getOrDefault(nam, new TreeSet<>());
+            for (String l : lops) cboLop.addItem(l);
+            cboLop.setEnabled(true);
+        } finally {
+            dangNap = false;
+        }
+        int so = demSV.getOrDefault(khoa, Map.of()).getOrDefault(nam, 0);
+        lblThongKe.setText("Khoa " + khoa + " · Năm " + nam + " · " + so + " SV");
+        if (khiChon != null) khiChon.accept(new LuaChon(khoa, nam, null));
     }
 
     private void xuLyDoiLop() {
         String khoa = (String) cboKhoa.getSelectedItem();
+        String namStr = (String) cboNam.getSelectedItem();
         String lop = (String) cboLop.getSelectedItem();
-        boolean coKhoaThat = khoa != null && !CHON_KHOA.equals(khoa);
-        boolean coLopThat = lop != null && !CHON_LOP.equals(lop);
 
-        if (coKhoaThat && coLopThat) {
-            if (khiChon != null) khiChon.accept(new LuaChon(khoa, lop));
-        } else {
-            baoAn();
+        boolean coKhoa = khoa != null && !CHON_KHOA.equals(khoa) && !TAT_CA_SV.equals(khoa);
+        boolean coNam = namStr != null && !CHON_NAM.equals(namStr);
+        boolean coLop = lop != null && !CHON_LOP.equals(lop);
+
+        if (!coKhoa || !coNam || !coLop) {
+            if (khiChon != null) khiChon.accept(null);
+            return;
         }
+
+        Integer nam = TAT_CA_NAM.equals(namStr) ? null : trichNam(namStr);
+        String lopFilter = TAT_CA_LOP.equals(lop) ? null : lop;
+
+        lblThongKe.setText("Khoa " + khoa
+                + (nam != null ? " · Năm " + nam : " · Tất cả năm")
+                + (lopFilter != null ? " · Lớp " + lopFilter : " · Tất cả lớp"));
+        if (khiChon != null) khiChon.accept(new LuaChon(khoa, nam, lopFilter));
     }
 
-    /** Bao ve man hinh chinh: chua chon du Khoa+Lop, an du lieu di. */
-    private void baoAn() {
-        if (khiChon != null) khiChon.accept(null);
+    private Integer trichNam(String s) {
+        if (s == null) return null;
+        try {
+            String p = s.replace("Năm ", "").trim().split("\\s+")[0];
+            return Integer.parseInt(p);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private JLabel nhanNho(String text) {
@@ -190,7 +274,6 @@ public class KhoaLopNavPanel extends JPanel {
         return l;
     }
 
-    /** To vien mau rieng cho tung combo (Khoa = xanh duong PRIMARY, Lop = xanh ngoc ACCENT_TEAL). */
     private void styleCombo(JComboBox<String> combo, Color mauVien) {
         combo.setFont(UITheme.FONT_BASE);
         combo.setBackground(Color.WHITE);

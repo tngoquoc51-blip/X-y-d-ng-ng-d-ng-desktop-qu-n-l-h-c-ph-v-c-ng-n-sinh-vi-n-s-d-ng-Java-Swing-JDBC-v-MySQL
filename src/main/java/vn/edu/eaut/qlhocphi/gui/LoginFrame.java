@@ -265,6 +265,13 @@ public class LoginFrame extends JFrame {
      * SAU KHI đổi xong; nếu không thì vào thẳng.
      */
     private void moTiepSauKhiKhoiPhuc(TaiKhoan tk) {
+        // Sinh viên không được vào cổng cán bộ (kể cả sau khi quên mật khẩu)
+        if (tk.getVaiTro() == vn.edu.eaut.qlhocphi.model.VaiTro.SINHVIEN) {
+            JOptionPane.showMessageDialog(this,
+                    "Tài khoản sinh viên vui lòng dùng nút \"ĐĂNG NHẬP SINH VIÊN\".",
+                    "Sai cổng đăng nhập", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         if (tk.isBatBuocDoiMatKhau()) {
             vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog dialog =
                     new vn.edu.eaut.qlhocphi.gui.sinhvien.DoiMatKhauDialog(this, tk, true, () -> {
@@ -391,6 +398,12 @@ public class LoginFrame extends JFrame {
                     if (tk == null) {
                         lblThongBao.setForeground(UITheme.DANGER);
                         lblThongBao.setText("Sai Tên Đăng Nhập Hoặc Mật Khẩu");
+                        return;
+                    }
+                    // Sinh viên không được vào cổng cán bộ
+                    if (tk.getVaiTro() == vn.edu.eaut.qlhocphi.model.VaiTro.SINHVIEN) {
+                        lblThongBao.setForeground(UITheme.DANGER);
+                        lblThongBao.setText("Tài khoản sinh viên vui lòng bấm \"ĐĂNG NHẬP SINH VIÊN\"");
                         return;
                     }
                     nhatKyHeThongService.ghi(tk, "DANG_NHAP", tk.getVaiTro().toString(),

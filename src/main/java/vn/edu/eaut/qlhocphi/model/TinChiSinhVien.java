@@ -1,16 +1,20 @@
-
 package vn.edu.eaut.qlhocphi.model;
 
 import java.time.LocalDateTime;
 
-/** Tổng hợp tín chỉ của một sinh viên. */
+/** Tổng hợp tín chỉ & điểm của một sinh viên. */
 public class TinChiSinhVien {
     private String maSV;
     private int tinChiTichLuy;
     private int tinChiBiRut;
     private int tinChiDangKy;
+    private int tinChiDaHoc;              // Tổng TC đã học (có điểm)
+    private int tongTcChuongTrinh = 183; // Mặc định khung CTĐT
+    private double diemTB10;             // ĐTB học kỳ/năm gần nhất hệ 10
+    private double diemTB4;              // ĐTB hệ 4
+    private double diemTBTichLuy10;      // ĐTB tích lũy hệ 10
+    private double diemTBTichLuy4;       // ĐTB tích lũy hệ 4
     private LocalDateTime capNhatLuc;
-    // Thông tin kèm từ SinhVien (join)
     private String hoTen;
     private Integer namNhapHoc;
     private Integer namThu;
@@ -24,6 +28,18 @@ public class TinChiSinhVien {
     public void setTinChiBiRut(int tinChiBiRut) { this.tinChiBiRut = tinChiBiRut; }
     public int getTinChiDangKy() { return tinChiDangKy; }
     public void setTinChiDangKy(int tinChiDangKy) { this.tinChiDangKy = tinChiDangKy; }
+    public int getTinChiDaHoc() { return tinChiDaHoc; }
+    public void setTinChiDaHoc(int tinChiDaHoc) { this.tinChiDaHoc = tinChiDaHoc; }
+    public int getTongTcChuongTrinh() { return tongTcChuongTrinh; }
+    public void setTongTcChuongTrinh(int tongTcChuongTrinh) { this.tongTcChuongTrinh = tongTcChuongTrinh; }
+    public double getDiemTB10() { return diemTB10; }
+    public void setDiemTB10(double diemTB10) { this.diemTB10 = diemTB10; }
+    public double getDiemTB4() { return diemTB4; }
+    public void setDiemTB4(double diemTB4) { this.diemTB4 = diemTB4; }
+    public double getDiemTBTichLuy10() { return diemTBTichLuy10; }
+    public void setDiemTBTichLuy10(double diemTBTichLuy10) { this.diemTBTichLuy10 = diemTBTichLuy10; }
+    public double getDiemTBTichLuy4() { return diemTBTichLuy4; }
+    public void setDiemTBTichLuy4(double diemTBTichLuy4) { this.diemTBTichLuy4 = diemTBTichLuy4; }
     public LocalDateTime getCapNhatLuc() { return capNhatLuc; }
     public void setCapNhatLuc(LocalDateTime capNhatLuc) { this.capNhatLuc = capNhatLuc; }
     public String getHoTen() { return hoTen; }
@@ -37,5 +53,9 @@ public class TinChiSinhVien {
 
     public int getTinChiConHieuLuc() {
         return Math.max(0, tinChiTichLuy);
+    }
+
+    public int getTinChiConThieu() {
+        return Math.max(0, tongTcChuongTrinh - tinChiTichLuy);
     }
 }

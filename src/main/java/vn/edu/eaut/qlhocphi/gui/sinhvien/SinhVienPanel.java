@@ -274,13 +274,13 @@ public class SinhVienPanel extends JPanel {
         card.setLayout(new BorderLayout(0, 10));
 
         tableModel = new DefaultTableModel(
-                new Object[]{"Mã SV", "Họ Tên", "Lớp", "Khoa", "Email", "SĐT", "Trạng Thái"}, 0) {
+                new Object[]{"Mã SV", "Họ Tên", "Khoa", "Năm", "Lớp", "TC tích lũy", "TC nợ", "Email", "SĐT", "Trạng Thái"}, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
         table = new JTable(tableModel);
         UIUtils.styleTable(table);
-        table.getColumnModel().getColumn(6).setCellRenderer(trangThaiRenderer());
+        table.getColumnModel().getColumn(9).setCellRenderer(trangThaiRenderer());
 
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -407,8 +407,15 @@ public class SinhVienPanel extends JPanel {
                     int dangHoc = 0;
                     for (SinhVien sv : list) {
                         tableModel.addRow(new Object[]{
-                                sv.getMaSV(), sv.getHoTen(), sv.getLop(), sv.getKhoa(),
-                                sv.getEmail(), sv.getSoDienThoai(),
+                                sv.getMaSV(),
+                                sv.getHoTen(),
+                                sv.getKhoa(),
+                                "Năm " + sv.getNamHoc(),
+                                sv.getLop(),
+                                sv.getTinChiTichLuy(),
+                                sv.getTinChiNo(),
+                                sv.getEmail(),
+                                sv.getSoDienThoai(),
                                 sv.isTrangThai() ? "Đang Học" : "Đã Nghỉ"
                         });
                         if (sv.isTrangThai()) dangHoc++;
@@ -433,17 +440,21 @@ public class SinhVienPanel extends JPanel {
      * Khoảng Trắng Thừa Như Bản Cũ.
      */
     private List<SinhVien> apDungBoLoc(List<SinhVien> list) {
-        // "Tất Cả" (Bấm Nút Riêng, Hoặc Đóng 1 Khoa Đang Mở Lại) Dùng Giá Trị
-        // Đặc Biệt TAT_CA (khoa = "__TAT_CA__") Để Phân Biệt Với Trạng Thái
-        // "Chưa Chọn Gì" (luaChonHienTai == null) - Cả 2 Trường Hợp Đều KHÔNG Lọc.
         if (luaChonHienTai == null || luaChonHienTai == KhoaLopNavPanel.LuaChon.TAT_CA) return list;
 
         List<SinhVien> ket = new ArrayList<>();
         for (SinhVien sv : list) {
-            String khoaSV = sv.getKhoa() == null ? "(Chưa Phân Khoa)" : sv.getKhoa().trim();
-            String lopSV = sv.getLop() == null ? "(Chưa Phân Lớp)" : sv.getLop().trim();
+            String khoaSV = sv.getKhoa() == null ? "(Chưa phân khoa)" : sv.getKhoa().trim();
             if (!luaChonHienTai.khoa.equalsIgnoreCase(khoaSV)) continue;
-            if (luaChonHienTai.lop != null && !luaChonHienTai.lop.equalsIgnoreCase(lopSV)) continue;
+
+            // Lọc theo năm học (nếu đã chọn)
+            if (luaChonHienTai.namHoc != null && sv.getNamHoc() != luaChonHienTai.namHoc) continue;
+
+            // Lọc theo lớp (nếu đã chọn)
+            if (luaChonHienTai.lop != null) {
+                String lopSV = sv.getLop() == null ? "(Chưa phân lớp)" : sv.getLop().trim();
+                if (!luaChonHienTai.lop.equalsIgnoreCase(lopSV)) continue;
+            }
             ket.add(sv);
         }
         return ket;

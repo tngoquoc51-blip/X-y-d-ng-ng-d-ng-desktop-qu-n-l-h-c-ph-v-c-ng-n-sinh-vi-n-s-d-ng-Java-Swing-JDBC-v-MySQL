@@ -405,6 +405,12 @@ public class StudentLoginFrame extends JFrame {
                         lblThongBao.setText("Sai Tên Đăng Nhập Hoặc Mật Khẩu");
                         return;
                     }
+                    // Chỉ sinh viên được vào cổng này
+                    if (tk.getVaiTro() != VaiTro.SINHVIEN) {
+                        lblThongBao.setForeground(UITheme.DANGER);
+                        lblThongBao.setText("Cổng này chỉ dành cho sinh viên. Cán bộ đăng nhập ở màn hình chính.");
+                        return;
+                    }
                     AuditContext.datNguoiDung(tk);
                     nhatKyHeThongService.ghi(tk, "DANG_NHAP", tk.getVaiTro().toString(),
                             "Sinh viên đăng nhập: " + tk.getTenDangNhap() + " (" + tk.getHoTen() + ")");
@@ -522,6 +528,11 @@ public class StudentLoginFrame extends JFrame {
                         lblThongBao.setText("Mã QR không hợp lệ hoặc đã bị thu hồi.");
                         return;
                     }
+                    if (tk.getVaiTro() != VaiTro.SINHVIEN) {
+                        lblThongBao.setForeground(UITheme.DANGER);
+                        lblThongBao.setText("Mã QR này không phải tài khoản sinh viên.");
+                        return;
+                    }
                     AuditContext.datNguoiDung(tk);
                     nhatKyHeThongService.ghi(tk, "DANG_NHAP", tk.getVaiTro().toString(),
                             "Sinh viên đăng nhập qua thẻ QR: " + tk.getTenDangNhap());
@@ -542,6 +553,13 @@ public class StudentLoginFrame extends JFrame {
      * trước, chỉ mở MainFrame SAU KHI đổi mật khẩu xong; nếu không thì vào thẳng.
      */
     private void moTiepSauKhiXacThuc(TaiKhoan tk) {
+        if (tk == null) return;
+        if (tk.getVaiTro() != VaiTro.SINHVIEN) {
+            JOptionPane.showMessageDialog(this,
+                    "Cổng này chỉ dành cho sinh viên.\nCán bộ (Admin / Phòng Đào tạo / Kế toán) vui lòng đăng nhập ở màn hình chính.",
+                    "Sai cổng đăng nhập", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         AuditContext.datNguoiDung(tk);
         nhatKyHeThongService.ghi(tk, "DANG_NHAP", tk.getVaiTro().toString(),
                 "Sinh viên đăng nhập qua Google: " + tk.getTenDangNhap() + " (" + tk.getHoTen() + ")");

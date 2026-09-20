@@ -1,26 +1,20 @@
 package vn.edu.eaut.qlhocphi.gui.admin;
 
-import vn.edu.eaut.qlhocphi.config.AppConfig;
 import vn.edu.eaut.qlhocphi.config.UITheme;
-import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.util.BackupService;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
- * Màn hình sao lưu / phục hồi CSDL - bản "desktop quản lý" đầy đủ: banner
- * đồng bộ màu, thẻ thông tin kết nối CSDL hiện tại, bật/tắt tự động sao lưu
- * định kỳ (javax.swing.Timer), và lịch sử thao tác trong phiên làm việc.
- * Chỉ dành cho vai trò ADMIN. Các thao tác gọi tiến trình ngoài (mysqldump/
- * mysql) đều chạy qua SwingWorker để không làm treo giao diện.
+ * Sao lưu / Phục hồi CSDL – giao diện nâng cấp cho Admin.
+ * Giữ nguyên BackupService (mysqldump/mysql) + SwingWorker.
  */
 public class BackupRestorePanel extends JPanel {
     private static final DateTimeFormatter DINH_DANG_TEN_FILE = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
@@ -30,257 +24,357 @@ public class BackupRestorePanel extends JPanel {
     private final BackupService backupService = new BackupService();
 
     private JLabel lblTrangThai;
+    private JLabel lblTinhTrangTuDong;
+    private JLabel lblThuMucTuDong;
     private JButton btnSaoLuu, btnPhucHoi;
     private JToggleButton btnTuDongSaoLuu;
-    private JLabel lblThuMucTuDong;
-    private JLabel lblTinhTrangTuDong;
-
     private JPanel khoiLichSu;
-    private final List<String[]> lichSuThaoTac = new ArrayList<>(); // [loai, gio, duongDan, trangThai]
+    private final List<String[]> lichSuThaoTac = new ArrayList<>();
 
     private File thuMucTuDongSaoLuu;
     private Timer timerTuDong;
 
     public BackupRestorePanel() {
-        setLayout(new BorderLayout(0, 16));
+        setLayout(new BorderLayout(0, 14));
         setOpaque(false);
+        setBorder(new EmptyBorder(4, 4, 4, 4));
 
         JPanel giua = new JPanel();
         giua.setOpaque(false);
         giua.setLayout(new BoxLayout(giua, BoxLayout.Y_AXIS));
-        giua.add(buildHeader());
-        giua.add(Box.createRigidArea(new Dimension(0, 16)));
-        giua.add(buildThongTinKetNoiRow());
-        giua.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        JPanel haiCot = new JPanel(new GridLayout(1, 2, 16, 0));
+        giua.add(buildHeader());
+        giua.add(Box.createRigidArea(new Dimension(0, 14)));
+        giua.add(buildThongTinKetNoiRow());
+        giua.add(Box.createRigidArea(new Dimension(0, 14)));
+
+        JPanel haiCot = new JPanel(new GridLayout(1, 2, 14, 0));
         haiCot.setOpaque(false);
         haiCot.setAlignmentX(Component.LEFT_ALIGNMENT);
+        haiCot.setMaximumSize(new Dimension(Integer.MAX_VALUE, 280));
         haiCot.add(buildBackupCard());
         haiCot.add(buildRestoreCard());
         giua.add(haiCot);
-        giua.add(Box.createRigidArea(new Dimension(0, 16)));
 
-        lblTrangThai = new JLabel(" ");
-        lblTrangThai.setFont(UITheme.FONT_BASE);
-        lblTrangThai.setAlignmentX(Component.LEFT_ALIGNMENT);
-        giua.add(lblTrangThai);
-        giua.add(Box.createRigidArea(new Dimension(0, 16)));
+        giua.add(Box.createRigidArea(new Dimension(0, 14)));
+        giua.add(buildTrangThaiBar());
+        giua.add(Box.createRigidArea(new Dimension(0, 12)));
+        giua.add(buildLichSuCard());
 
-        JPanel lichSuCard = buildLichSuCard();
-        lichSuCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        giua.add(lichSuCard);
-
-        JScrollPane scroll = new JScrollPane(bocNgoai(giua));
-        scroll.setBorder(null);
+        JScrollPane scroll = new JScrollPane(giua);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         add(scroll, BorderLayout.CENTER);
     }
 
-    /** Bám sát chiều rộng khung cuộn, không để trống khoảng trắng lệch bên phải. */
-    private JPanel bocNgoai(JPanel noiDung) {
-        JPanel wrap = new KhungCuonToanChieuRong(new BorderLayout());
-        wrap.setOpaque(false);
-        wrap.add(noiDung, BorderLayout.NORTH);
-        return wrap;
-    }
-
-    private static class KhungCuonToanChieuRong extends JPanel implements Scrollable {
-        KhungCuonToanChieuRong(LayoutManager lm) { super(lm); }
-        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
-        @Override public int getScrollableUnitIncrement(Rectangle r, int huong, int dir) { return 16; }
-        @Override public int getScrollableBlockIncrement(Rectangle r, int huong, int dir) { return 120; }
-        @Override public boolean getScrollableTracksViewportWidth() { return true; }
-        @Override public boolean getScrollableTracksViewportHeight() { return false; }
-    }
-
-    // ================== HEADER (banner + logo) ==================
+    // ================== HEADER ==================
 
     private JPanel buildHeader() {
         JPanel banner = UITheme.gradientBanner();
-        banner.setLayout(new BorderLayout(14, 0));
-        banner.setBorder(BorderFactory.createEmptyBorder(18, 22, 18, 22));
-        banner.setPreferredSize(new Dimension(10, 90));
+        banner.setLayout(new BorderLayout(12, 0));
+        banner.setBorder(new EmptyBorder(16, 20, 16, 20));
+        banner.setPreferredSize(new Dimension(10, 84));
+        banner.setMaximumSize(new Dimension(Integer.MAX_VALUE, 84));
+        banner.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JPanel trai = new JPanel(new BorderLayout(14, 0));
-        trai.setOpaque(false);
-        trai.add(logoBadge(), BorderLayout.WEST);
-
-        JPanel chuText = new JPanel();
-        chuText.setOpaque(false);
-        chuText.setLayout(new BoxLayout(chuText, BoxLayout.Y_AXIS));
         JLabel tieuDe = new JLabel("Sao lưu & Phục hồi CSDL");
         tieuDe.setFont(UITheme.FONT_TITLE);
         tieuDe.setForeground(Color.WHITE);
-        JLabel phu = new JLabel("Bảo vệ dữ liệu hệ thống: sao lưu thủ công, tự động định kỳ và phục hồi khẩn cấp");
+
+        JLabel phu = new JLabel("Bảo vệ dữ liệu học phí · Xuất .sql thủ công hoặc tự động · Phục hồi khẩn cấp");
         phu.setFont(UITheme.FONT_BASE);
         phu.setForeground(new Color(255, 255, 255, 210));
-        chuText.add(tieuDe);
-        chuText.add(Box.createRigidArea(new Dimension(0, 4)));
-        chuText.add(phu);
-        trai.add(chuText, BorderLayout.CENTER);
-        banner.add(trai, BorderLayout.WEST);
 
+        JPanel text = new JPanel();
+        text.setOpaque(false);
+        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
+        text.add(tieuDe);
+        text.add(Box.createRigidArea(new Dimension(0, 4)));
+        text.add(phu);
+
+        banner.add(text, BorderLayout.CENTER);
         return banner;
     }
 
-    private JComponent logoBadge() {
-        JComponent badge = new JComponent() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(255, 255, 255, 55));
-                g2.fillOval(0, 0, getWidth(), getHeight());
-                g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
-                FontMetrics fm = g2.getFontMetrics();
-                String icon = "\uD83D\uDDC4";
-                int x = (getWidth() - fm.stringWidth(icon)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(icon, x, y);
-                g2.dispose();
-            }
-        };
-        badge.setPreferredSize(new Dimension(52, 52));
-        badge.setOpaque(false);
-        return badge;
-    }
-
-    // ================== THÔNG TIN KẾT NỐI CSDL ==================
+    // ================== THÔNG TIN KẾT NỐI ==================
 
     private JPanel buildThongTinKetNoiRow() {
-        JPanel row = new JPanel(new GridLayout(1, 3, 16, 0));
+        String host = "localhost";
+        String port = "3306";
+        String db = "qlhocphi";
+        try {
+            String url = vn.edu.eaut.qlhocphi.config.AppConfig.get("db.url");
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("jdbc:mysql://([^:/]+)(:(\\d+))?/([^?]+)")
+                    .matcher(url != null ? url : "");
+            if (matcher.find()) {
+                host = matcher.group(1);
+                if (matcher.group(3) != null) port = matcher.group(3);
+                db = matcher.group(4);
+            }
+        } catch (Exception ignored) {}
+
+        JPanel row = new JPanel(new GridLayout(1, 3, 12, 0));
         row.setOpaque(false);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 78));
 
-        String[] tt = tachThongTinKetNoi();
-        row.add(thongKeCard("Máy chủ CSDL", tt[0] + ":" + tt[1], UITheme.PRIMARY));
-        row.add(thongKeCard("Tên cơ sở dữ liệu", tt[2], UITheme.TEXT_VIOLET));
-
+        row.add(theInfo("Máy chủ CSDL", host + ":" + port, UITheme.TEXT_BLUE != null ? UITheme.TEXT_BLUE : new Color(0x1D, 0x4E, 0xD8)));
+        row.add(theInfo("Cơ sở dữ liệu", db, UITheme.PRIMARY));
         lblTinhTrangTuDong = new JLabel("Đang tắt");
-        row.add(thongKeCardVoiNhan("Tự động sao lưu", lblTinhTrangTuDong, UITheme.WARNING));
+        lblTinhTrangTuDong.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblTinhTrangTuDong.setForeground(UITheme.WARNING != null ? UITheme.WARNING : new Color(0xD9, 0x77, 0x06));
+        row.add(theInfoVoiLabel("Tự động sao lưu", lblTinhTrangTuDong));
 
         return row;
     }
 
-    private JPanel thongKeCard(String tieuDe, String giaTri, Color mauNhan) {
-        JLabel lbl = new JLabel(giaTri);
-        return thongKeCardVoiNhan(tieuDe, lbl, mauNhan);
+    private JPanel theInfo(String tieuDe, String giaTri, Color mau) {
+        JPanel p = UITheme.card();
+        p.setLayout(new BorderLayout(0, 4));
+        p.setBorder(new EmptyBorder(12, 14, 12, 14));
+        JLabel td = new JLabel(tieuDe);
+        td.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        td.setForeground(UITheme.TEXT_MUTED);
+        JLabel gt = new JLabel(giaTri);
+        gt.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        gt.setForeground(mau);
+        p.add(td, BorderLayout.NORTH);
+        p.add(gt, BorderLayout.CENTER);
+        return p;
     }
 
-    private JPanel thongKeCardVoiNhan(String tieuDe, JLabel giaTri, Color mauNhan) {
-        JPanel card = UITheme.card();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        JLabel l1 = new JLabel(tieuDe);
-        l1.setFont(UITheme.FONT_BASE);
-        l1.setForeground(UITheme.TEXT_MUTED);
-        l1.setAlignmentX(Component.LEFT_ALIGNMENT);
-        giaTri.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        giaTri.setForeground(mauNhan);
-        giaTri.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(l1);
-        card.add(Box.createRigidArea(new Dimension(0, 6)));
-        card.add(giaTri);
-        return card;
+    private JPanel theInfoVoiLabel(String tieuDe, JLabel giaTri) {
+        JPanel p = UITheme.card();
+        p.setLayout(new BorderLayout(0, 4));
+        p.setBorder(new EmptyBorder(12, 14, 12, 14));
+        JLabel td = new JLabel(tieuDe);
+        td.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        td.setForeground(UITheme.TEXT_MUTED);
+        p.add(td, BorderLayout.NORTH);
+        p.add(giaTri, BorderLayout.CENTER);
+        return p;
     }
 
-    /** Tách host/port/database từ chuỗi db.url - chỉ để HIỂN THỊ, không dùng để kết nối (BackupService tự làm việc này). */
-    private String[] tachThongTinKetNoi() {
-        String url = AppConfig.get("db.url");
-        String host = "localhost", port = "3306", db = "qlhocphi";
-        if (url != null) {
-            Pattern p = Pattern.compile("jdbc:mysql://([^:/]+)(:(\\d+))?/([^?]+)");
-            Matcher m = p.matcher(url);
-            if (m.find()) {
-                host = m.group(1);
-                if (m.group(3) != null) port = m.group(3);
-                db = m.group(4);
-            }
-        }
-        return new String[]{host, port, db};
-    }
-
-    // ================== SAO LƯU (thủ công + tự động định kỳ) ==================
+    // ================== CARD SAO LƯU ==================
 
     private JPanel buildBackupCard() {
         JPanel card = UITheme.card();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(new EmptyBorder(18, 18, 18, 18));
 
-        card.add(UITheme.sectionLabel("Sao lưu dữ liệu"));
-        card.add(Box.createRigidArea(new Dimension(0, 10)));
+        JLabel td = new JLabel("Sao lưu dữ liệu");
+        td.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        td.setForeground(UITheme.TEXT_PRIMARY);
+        td.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel mota = new JLabel("<html>Xuất toàn bộ CSDL ra 1 file .sql. "
-                + "Nên sao lưu định kỳ (VD: hàng tuần) và lưu trữ ở nơi an toàn, tách biệt máy chủ.</html>");
-        mota.setFont(UITheme.FONT_BASE);
-        mota.setForeground(UITheme.TEXT_MUTED);
-        mota.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(mota);
-        card.add(Box.createRigidArea(new Dimension(0, 16)));
+        JLabel moTa = new JLabel("<html>Xuất toàn bộ CSDL ra file <b>.sql</b>. Nên sao lưu định kỳ<br>"
+                + "(hàng tuần) và lưu trữ ngoài máy chủ.</html>");
+        moTa.setFont(UITheme.FONT_BASE);
+        moTa.setForeground(UITheme.TEXT_MUTED);
+        moTa.setAlignmentX(Component.LEFT_ALIGNMENT);
+        moTa.setBorder(new EmptyBorder(8, 0, 12, 0));
 
-        btnSaoLuu = UITheme.primaryButton("Sao lưu ngay");
+        btnSaoLuu = UITheme.primaryButton("⬇  Sao lưu ngay");
         btnSaoLuu.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnSaoLuu.setMaximumSize(new Dimension(220, 40));
         btnSaoLuu.addActionListener(e -> thucHienSaoLuu());
-        card.add(btnSaoLuu);
 
-        card.add(Box.createRigidArea(new Dimension(0, 16)));
-        card.add(new JSeparator());
-        card.add(Box.createRigidArea(new Dimension(0, 16)));
+        JSeparator sep = new JSeparator();
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        sep.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel tieuDeTuDong = new JLabel("Tự động sao lưu định kỳ (" + CHU_KY_TU_DONG_PHUT + " phút/lần)");
-        tieuDeTuDong.setFont(UITheme.FONT_BOLD);
-        tieuDeTuDong.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(tieuDeTuDong);
-        card.add(Box.createRigidArea(new Dimension(0, 8)));
+        JLabel tdAuto = new JLabel("Tự động sao lưu định kỳ (" + CHU_KY_TU_DONG_PHUT + " phút/lần)");
+        tdAuto.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tdAuto.setForeground(UITheme.TEXT_PRIMARY);
+        tdAuto.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tdAuto.setBorder(new EmptyBorder(12, 0, 4, 0));
 
         lblThuMucTuDong = new JLabel("Chưa chọn thư mục lưu tự động");
-        lblThuMucTuDong.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblThuMucTuDong.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblThuMucTuDong.setForeground(UITheme.TEXT_MUTED);
         lblThuMucTuDong.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(lblThuMucTuDong);
-        card.add(Box.createRigidArea(new Dimension(0, 8)));
 
         btnTuDongSaoLuu = new JToggleButton("Bật tự động sao lưu");
+        btnTuDongSaoLuu.setFont(UITheme.FONT_BOLD);
         btnTuDongSaoLuu.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnTuDongSaoLuu.setFont(UITheme.FONT_BASE);
+        btnTuDongSaoLuu.setMaximumSize(new Dimension(220, 36));
         btnTuDongSaoLuu.addActionListener(e -> chuyenDoiTuDongSaoLuu());
-        card.add(btnTuDongSaoLuu);
 
+        card.add(td);
+        card.add(moTa);
+        card.add(btnSaoLuu);
+        card.add(Box.createRigidArea(new Dimension(0, 14)));
+        card.add(sep);
+        card.add(tdAuto);
+        card.add(lblThuMucTuDong);
+        card.add(Box.createRigidArea(new Dimension(0, 8)));
+        card.add(btnTuDongSaoLuu);
+        card.add(Box.createVerticalGlue());
         return card;
     }
 
+    // ================== CARD PHỤC HỒI ==================
+
+    private JPanel buildRestoreCard() {
+        JPanel card = UITheme.card();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(new EmptyBorder(18, 18, 18, 18));
+
+        JLabel td = new JLabel("Phục hồi dữ liệu");
+        td.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        td.setForeground(UITheme.TEXT_PRIMARY);
+        td.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel canhBao = new JLabel("<html><b style='color:#B91C1C'>Cảnh báo:</b> Phục hồi sẽ <b>GHI ĐÈ</b> toàn bộ dữ liệu<br>"
+                + "hiện tại bằng nội dung file .sql. Hãy sao lưu trước khi phục hồi.</html>");
+        canhBao.setFont(UITheme.FONT_BASE);
+        canhBao.setForeground(UITheme.TEXT_MUTED);
+        canhBao.setAlignmentX(Component.LEFT_ALIGNMENT);
+        canhBao.setBorder(new EmptyBorder(8, 0, 14, 0));
+
+        btnPhucHoi = UITheme.dangerButton("⬆  Chọn file và phục hồi");
+        btnPhucHoi.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnPhucHoi.setMaximumSize(new Dimension(240, 40));
+        btnPhucHoi.addActionListener(e -> thucHienPhucHoi());
+
+        JLabel goiY = new JLabel("<html><br>Gợi ý vận hành:<br>"
+                + "• Chỉ phục hồi khi có sự cố hoặc chuyển máy<br>"
+                + "• Kiểm tra file .sql còn nguyên vẹn<br>"
+                + "• Khởi động lại app sau khi phục hồi thành công</html>");
+        goiY.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        goiY.setForeground(UITheme.TEXT_MUTED);
+        goiY.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(td);
+        card.add(canhBao);
+        card.add(btnPhucHoi);
+        card.add(goiY);
+        card.add(Box.createVerticalGlue());
+        return card;
+    }
+
+    // ================== THANH TRẠNG THÁI ==================
+
+    private JPanel buildTrangThaiBar() {
+        JPanel bar = UITheme.card();
+        bar.setLayout(new BorderLayout());
+        bar.setBorder(new EmptyBorder(10, 14, 10, 14));
+        bar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+
+        lblTrangThai = new JLabel("Sẵn sàng – chọn Sao lưu ngay hoặc Phục hồi khi cần");
+        lblTrangThai.setFont(UITheme.FONT_BASE);
+        lblTrangThai.setForeground(UITheme.TEXT_MUTED);
+        bar.add(lblTrangThai, BorderLayout.CENTER);
+        return bar;
+    }
+
+    // ================== LỊCH SỬ ==================
+
+    private JPanel buildLichSuCard() {
+        JPanel card = UITheme.card();
+        card.setLayout(new BorderLayout(0, 8));
+        card.setBorder(new EmptyBorder(14, 16, 14, 16));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
+
+        JLabel td = new JLabel("Lịch sử thao tác (phiên làm việc này)");
+        td.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        td.setForeground(UITheme.TEXT_PRIMARY);
+
+        khoiLichSu = new JPanel();
+        khoiLichSu.setOpaque(false);
+        khoiLichSu.setLayout(new BoxLayout(khoiLichSu, BoxLayout.Y_AXIS));
+        khoiLichSu.add(dongTrong());
+
+        JScrollPane sp = new JScrollPane(khoiLichSu);
+        sp.setBorder(BorderFactory.createEmptyBorder());
+        sp.setOpaque(false);
+        sp.getViewport().setOpaque(false);
+        sp.setPreferredSize(new Dimension(100, 140));
+
+        card.add(td, BorderLayout.NORTH);
+        card.add(sp, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JLabel dongTrong() {
+        JLabel l = new JLabel("Chưa có thao tác nào trong phiên làm việc này");
+        l.setFont(UITheme.FONT_BASE);
+        l.setForeground(UITheme.TEXT_MUTED);
+        l.setBorder(new EmptyBorder(6, 0, 6, 0));
+        return l;
+    }
+
+    private void themLichSu(String loai, String duongDan, boolean thanhCong) {
+        String gio = LocalDateTime.now().format(DINH_DANG_HIEN_THI);
+        String tt = thanhCong ? "Thành công" : "Thất bại";
+        lichSuThaoTac.add(0, new String[]{loai, gio, duongDan, tt});
+        khoiLichSu.removeAll();
+        int max = Math.min(lichSuThaoTac.size(), 8);
+        for (int i = 0; i < max; i++) {
+            String[] d = lichSuThaoTac.get(i);
+            khoiLichSu.add(dongLichSu(d[0], d[1], d[2], d[3]));
+            khoiLichSu.add(Box.createRigidArea(new Dimension(0, 4)));
+        }
+        khoiLichSu.revalidate();
+        khoiLichSu.repaint();
+    }
+
+    private JPanel dongLichSu(String loai, String gio, String duongDan, String trangThai) {
+        JPanel p = new JPanel(new BorderLayout(10, 0));
+        p.setOpaque(true);
+        p.setBackground(new Color(0xF8, 0xFA, 0xFC));
+        p.setBorder(new EmptyBorder(8, 10, 8, 10));
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+
+        JLabel lbl = new JLabel(gio + "  ·  " + loai + "  ·  " + duongDan);
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lbl.setForeground(UITheme.TEXT_PRIMARY);
+
+        JLabel st = new JLabel(trangThai);
+        st.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        st.setForeground("Thành công".equals(trangThai) ? UITheme.SUCCESS : UITheme.DANGER);
+
+        p.add(lbl, BorderLayout.CENTER);
+        p.add(st, BorderLayout.EAST);
+        return p;
+    }
+
+    // ================== TỰ ĐỘNG ==================
+
     private void chuyenDoiTuDongSaoLuu() {
         if (btnTuDongSaoLuu.isSelected()) {
-            if (thuMucTuDongSaoLuu == null) {
-                JFileChooser chooser = new JFileChooser();
-                chooser.setDialogTitle("Chọn thư mục để lưu file sao lưu tự động");
-                chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-                if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
-                    btnTuDongSaoLuu.setSelected(false);
-                    return;
-                }
-                thuMucTuDongSaoLuu = chooser.getSelectedFile();
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            chooser.setDialogTitle("Chọn thư mục lưu file sao lưu tự động");
+            if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+                btnTuDongSaoLuu.setSelected(false);
+                return;
             }
-            lblThuMucTuDong.setText("Lưu vào: " + thuMucTuDongSaoLuu.getAbsolutePath());
-            lblTinhTrangTuDong.setText("Đang bật");
-            lblTinhTrangTuDong.setForeground(UITheme.SUCCESS);
-            btnTuDongSaoLuu.setText("Tắt tự động sao lưu");
-
+            thuMucTuDongSaoLuu = chooser.getSelectedFile();
+            lblThuMucTuDong.setText("Thư mục: " + thuMucTuDongSaoLuu.getAbsolutePath());
             timerTuDong = new Timer(CHU_KY_TU_DONG_PHUT * 60 * 1000, e -> thucHienSaoLuuTuDong());
             timerTuDong.start();
+            btnTuDongSaoLuu.setText("Đang bật tự động...");
+            lblTinhTrangTuDong.setText("Đang bật (" + CHU_KY_TU_DONG_PHUT + " phút)");
+            lblTinhTrangTuDong.setForeground(UITheme.SUCCESS);
         } else {
             if (timerTuDong != null) timerTuDong.stop();
-            lblTinhTrangTuDong.setText("Đang tắt");
-            lblTinhTrangTuDong.setForeground(UITheme.WARNING);
             btnTuDongSaoLuu.setText("Bật tự động sao lưu");
+            lblThuMucTuDong.setText("Chưa chọn thư mục lưu tự động");
+            lblTinhTrangTuDong.setText("Đang tắt");
+            lblTinhTrangTuDong.setForeground(UITheme.WARNING != null ? UITheme.WARNING : new Color(0xD9, 0x77, 0x06));
         }
     }
 
     private void thucHienSaoLuuTuDong() {
+        if (thuMucTuDongSaoLuu == null) return;
         File fileDich = new File(thuMucTuDongSaoLuu,
-                "auto_backup_" + LocalDateTime.now().format(DINH_DANG_TEN_FILE) + ".sql");
-
+                "backup_auto_" + LocalDateTime.now().format(DINH_DANG_TEN_FILE) + ".sql");
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
@@ -294,7 +388,7 @@ public class BackupRestorePanel extends JPanel {
                     get();
                     themLichSu("Sao lưu tự động", fileDich.getAbsolutePath(), true);
                     lblTrangThai.setForeground(UITheme.SUCCESS);
-                    lblTrangThai.setText("Sao lưu tự động thành công: " + fileDich.getName());
+                    lblTrangThai.setText("Tự động sao lưu OK: " + fileDich.getName());
                 } catch (Exception ex) {
                     themLichSu("Sao lưu tự động", fileDich.getAbsolutePath(), false);
                     baoLoi(ex);
@@ -304,105 +398,13 @@ public class BackupRestorePanel extends JPanel {
         worker.execute();
     }
 
-    // ================== PHỤC HỒI ==================
-
-    private JPanel buildRestoreCard() {
-        JPanel card = UITheme.card();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-
-        card.add(UITheme.sectionLabel("Phục hồi dữ liệu"));
-        card.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        JLabel mota = new JLabel("<html><b>Cảnh báo:</b> Phục hồi sẽ GHI ĐÈ toàn bộ dữ liệu hiện tại "
-                + "bằng nội dung trong file .sql được chọn. Hãy chắc chắn bạn đã sao lưu dữ liệu hiện tại trước.</html>");
-        mota.setFont(UITheme.FONT_BASE);
-        mota.setForeground(UITheme.DANGER);
-        mota.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.add(mota);
-        card.add(Box.createRigidArea(new Dimension(0, 16)));
-
-        btnPhucHoi = UITheme.dangerButton("Chọn file và phục hồi");
-        btnPhucHoi.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnPhucHoi.addActionListener(e -> thucHienPhucHoi());
-        card.add(btnPhucHoi);
-
-        return card;
-    }
-
-    // ================== LỊCH SỬ THAO TÁC (trong phiên làm việc) ==================
-
-    private JPanel buildLichSuCard() {
-        JPanel card = UITheme.card();
-        card.setLayout(new BorderLayout(0, 10));
-        card.add(UITheme.sectionLabel("Lịch sử thao tác (trong phiên làm việc này)"), BorderLayout.NORTH);
-
-        khoiLichSu = new JPanel();
-        khoiLichSu.setOpaque(false);
-        khoiLichSu.setLayout(new BoxLayout(khoiLichSu, BoxLayout.Y_AXIS));
-        khoiLichSu.add(dongTrongLichSu());
-        card.add(khoiLichSu, BorderLayout.CENTER);
-
-        return card;
-    }
-
-    private JLabel dongTrongLichSu() {
-        JLabel trong = new JLabel("Chưa có thao tác nào trong phiên làm việc này");
-        trong.setFont(UITheme.FONT_BASE);
-        trong.setForeground(UITheme.TEXT_MUTED);
-        return trong;
-    }
-
-    private void themLichSu(String loai, String duongDan, boolean thanhCong) {
-        lichSuThaoTac.add(0, new String[]{loai, LocalDateTime.now().format(DINH_DANG_HIEN_THI), duongDan,
-                thanhCong ? "Thành công" : "Thất bại"});
-
-        khoiLichSu.removeAll();
-        for (String[] dong : lichSuThaoTac) {
-            khoiLichSu.add(dongLichSu(dong[0], dong[1], dong[2], dong[3]));
-        }
-        khoiLichSu.revalidate();
-        khoiLichSu.repaint();
-    }
-
-    private JPanel dongLichSu(String loai, String gio, String duongDan, String trangThai) {
-        JPanel row = new JPanel(new BorderLayout(12, 0));
-        row.setOpaque(false);
-        row.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xF0, 0xF2, 0xF6)),
-                BorderFactory.createEmptyBorder(10, 4, 10, 4)));
-
-        JPanel trai = new JPanel();
-        trai.setOpaque(false);
-        trai.setLayout(new BoxLayout(trai, BoxLayout.Y_AXIS));
-        JLabel lblLoai = new JLabel(loai + "  -  " + gio);
-        lblLoai.setFont(UITheme.FONT_BOLD);
-        lblLoai.setForeground(UITheme.TEXT_PRIMARY);
-        JLabel lblDuongDan = new JLabel(duongDan);
-        lblDuongDan.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        lblDuongDan.setForeground(UITheme.TEXT_MUTED);
-        trai.add(lblLoai);
-        trai.add(lblDuongDan);
-        row.add(trai, BorderLayout.CENTER);
-
-        boolean ok = "Thành công".equals(trangThai) || "Thanh cong".equals(trangThai);
-        JLabel pill = UITheme.pill(trangThai, ok ? UITheme.TINT_GREEN : new Color(0xFC, 0xE4, 0xE4),
-                ok ? UITheme.TEXT_GREEN : UITheme.DANGER);
-        JPanel phaiWrap = new JPanel(new GridBagLayout());
-        phaiWrap.setOpaque(false);
-        phaiWrap.add(pill);
-        row.add(phaiWrap, BorderLayout.EAST);
-
-        return row;
-    }
-
-    // ================== THỰC HIỆN SAO LƯU / PHỤC HỒI (thủ công) ==================
+    // ================== SAO LƯU / PHỤC HỒI THỦ CÔNG ==================
 
     private void thucHienSaoLuu() {
         JFileChooser chooser = new JFileChooser();
         String tenFileGoiY = "backup_qlhocphi_" + LocalDateTime.now().format(DINH_DANG_TEN_FILE) + ".sql";
         chooser.setSelectedFile(new File(tenFileGoiY));
-        int ketQua = chooser.showSaveDialog(this);
-        if (ketQua != JFileChooser.APPROVE_OPTION) return;
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
         File fileDich = chooser.getSelectedFile();
 
         capNhatTrangThaiDangXuLy("Đang sao lưu dữ liệu...");
@@ -433,8 +435,7 @@ public class BackupRestorePanel extends JPanel {
     private void thucHienPhucHoi() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Tập tin SQL (*.sql)", "sql"));
-        int ketQua = chooser.showOpenDialog(this);
-        if (ketQua != JFileChooser.APPROVE_OPTION) return;
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
         File fileNguon = chooser.getSelectedFile();
 
         int xacNhan = JOptionPane.showConfirmDialog(this,
@@ -457,8 +458,8 @@ public class BackupRestorePanel extends JPanel {
                     get();
                     themLichSu("Phục hồi dữ liệu", fileNguon.getAbsolutePath(), true);
                     lblTrangThai.setForeground(UITheme.SUCCESS);
-                    lblTrangThai.setText("Phục hồi thành công từ file: " + fileNguon.getName()
-                            + ". Vui lòng khởi động lại ứng dụng để đảm bảo dữ liệu được làm mới.");
+                    lblTrangThai.setText("Phục hồi thành công từ: " + fileNguon.getName()
+                            + ". Nên khởi động lại ứng dụng.");
                 } catch (Exception ex) {
                     themLichSu("Phục hồi dữ liệu", fileNguon.getAbsolutePath(), false);
                     baoLoi(ex);
@@ -484,7 +485,7 @@ public class BackupRestorePanel extends JPanel {
         lblTrangThai.setForeground(UITheme.DANGER);
         String msg = cause.getMessage() != null ? cause.getMessage() : cause.toString();
         if (msg.contains("Cannot run program") || msg.contains("error=2")) {
-            msg = "Không tìm thấy lệnh mysqldump/mysql. Vui lòng cài MySQL client và thêm vào PATH hệ thống.";
+            msg = "Không tìm thấy mysqldump/mysql. Cài MySQL client và thêm vào PATH.";
         }
         lblTrangThai.setText("Lỗi: " + msg);
     }

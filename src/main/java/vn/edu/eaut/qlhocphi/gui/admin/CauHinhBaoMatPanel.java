@@ -4,13 +4,15 @@ import vn.edu.eaut.qlhocphi.bus.AdminConfigService;
 import vn.edu.eaut.qlhocphi.config.UITheme;
 import vn.edu.eaut.qlhocphi.gui.common.UIUtils;
 import vn.edu.eaut.qlhocphi.model.CauHinhBaoMat;
-import vn.edu.eaut.qlhocphi.util.DataEncryptionMigrator;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
-/** Cấu hình bảo mật: độ dài MK, session timeout, khóa sau N lần sai + mã hóa dữ liệu. */
+/**
+ * Cấu hình bảo mật – giao diện chuẩn Admin trường ĐH:
+ * banner + card chính sách + card mã hóa AES.
+ */
 public class CauHinhBaoMatPanel extends JPanel {
     private final AdminConfigService service = new AdminConfigService();
     private final JSpinner spDoDai = new JSpinner(new SpinnerNumberModel(6, 4, 32, 1));
@@ -18,102 +20,23 @@ public class CauHinhBaoMatPanel extends JPanel {
     private final JSpinner spLanSai = new JSpinner(new SpinnerNumberModel(5, 1, 20, 1));
     private final JSpinner spKhoaPhut = new JSpinner(new SpinnerNumberModel(15, 1, 1440, 1));
     private final JCheckBox chkDoiMk = new JCheckBox("Bắt buộc đổi mật khẩu lần đăng nhập đầu");
-    private final JLabel lblTrangThaiMaHoa = new JLabel(" ");
 
     public CauHinhBaoMatPanel() {
-        setLayout(new BorderLayout(0, 16));
+        setLayout(new BorderLayout(0, 14));
         setOpaque(false);
-        setBorder(new EmptyBorder(4, 4, 4, 4));
+        setBorder(new EmptyBorder(4, 4, 8, 4));
 
-        JLabel title = new JLabel("Cấu hình bảo mật");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        title.setForeground(UITheme.TEXT_PRIMARY);
-        JLabel sub = new JLabel("Chính sách mật khẩu, phiên đăng nhập, khóa tài khoản và mã hóa dữ liệu");
-        sub.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        sub.setForeground(UITheme.TEXT_MUTED);
+        add(buildBanner(), BorderLayout.NORTH);
 
-        JPanel head = new JPanel();
-        head.setOpaque(false);
-        head.setLayout(new BoxLayout(head, BoxLayout.Y_AXIS));
-        head.add(title);
-        head.add(Box.createRigidArea(new Dimension(0, 4)));
-        head.add(sub);
-        add(head, BorderLayout.NORTH);
+        JPanel giua = new JPanel();
+        giua.setOpaque(false);
+        giua.setLayout(new BoxLayout(giua, BoxLayout.Y_AXIS));
+        giua.add(buildCardChinhSach());
+        giua.add(Box.createRigidArea(new Dimension(0, 14)));
+        giua.add(buildCardMaHoa());
+        add(giua, BorderLayout.CENTER);
 
-        // ===== Form cấu hình mật khẩu =====
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setOpaque(true);
-        form.setBackground(UITheme.BG_CARD);
-        form.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UITheme.BORDER, 1, true),
-                new EmptyBorder(24, 28, 24, 28)));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        themDong(form, gbc, 0, "Độ dài mật khẩu tối thiểu", spDoDai, "ký tự (4–32)");
-        themDong(form, gbc, 1, "Thời gian hết phiên (session)", spSession, "phút");
-        themDong(form, gbc, 2, "Số lần đăng nhập sai tối đa", spLanSai, "lần → khóa tạm");
-        themDong(form, gbc, 3, "Thời gian khóa tài khoản", spKhoaPhut, "phút");
-
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 3;
-        chkDoiMk.setFont(UITheme.FONT_BASE);
-        chkDoiMk.setOpaque(false);
-        form.add(chkDoiMk, gbc);
-
-        // ===== Phần Mã hóa dữ liệu =====
-        JPanel maHoaPanel = new JPanel(new BorderLayout(12, 8));
-        maHoaPanel.setOpaque(true);
-        maHoaPanel.setBackground(UITheme.BG_CARD);
-        maHoaPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UITheme.BORDER, 1, true),
-                new EmptyBorder(20, 24, 20, 24)));
-
-        JLabel lblMaHoaTitle = new JLabel("Mã hóa dữ liệu nhạy cảm (AES-256)");
-        lblMaHoaTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        lblMaHoaTitle.setForeground(UITheme.TEXT_PRIMARY);
-
-        JLabel lblMaHoaMoTa = new JLabel("<html>Mã hóa Email, Số điện thoại, Địa chỉ, Quê quán của sinh viên.<br>"
-                + "Chạy một lần để mã hóa toàn bộ dữ liệu cũ đang lưu dạng plaintext.</html>");
-        lblMaHoaMoTa.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblMaHoaMoTa.setForeground(UITheme.TEXT_MUTED);
-
-        JPanel textMaHoa = new JPanel();
-        textMaHoa.setOpaque(false);
-        textMaHoa.setLayout(new BoxLayout(textMaHoa, BoxLayout.Y_AXIS));
-        textMaHoa.add(lblMaHoaTitle);
-        textMaHoa.add(Box.createRigidArea(new Dimension(0, 6)));
-        textMaHoa.add(lblMaHoaMoTa);
-        textMaHoa.add(Box.createRigidArea(new Dimension(0, 8)));
-        lblTrangThaiMaHoa.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        textMaHoa.add(lblTrangThaiMaHoa);
-
-        JButton btnMaHoa = UITheme.primaryButton("Mã hóa dữ liệu cũ ngay");
-        btnMaHoa.addActionListener(e -> chayMaHoaDuLieuCu());
-
-        JPanel btnWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        btnWrap.setOpaque(false);
-        btnWrap.add(btnMaHoa);
-
-        maHoaPanel.add(textMaHoa, BorderLayout.CENTER);
-        maHoaPanel.add(btnWrap, BorderLayout.SOUTH);
-
-        // Ghép layout
-        JPanel center = new JPanel();
-        center.setOpaque(false);
-        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
-        center.add(form);
-        center.add(Box.createRigidArea(new Dimension(0, 16)));
-        center.add(maHoaPanel);
-
-        JPanel wrap = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        wrap.setOpaque(false);
-        wrap.add(center);
-        add(wrap, BorderLayout.CENTER);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actions.setOpaque(false);
         JButton btnTai = UITheme.secondaryButton("Tải lại");
         JButton btnLuu = UITheme.primaryButton("Lưu cấu hình bảo mật");
@@ -123,62 +46,148 @@ public class CauHinhBaoMatPanel extends JPanel {
         actions.add(btnLuu);
         add(actions, BorderLayout.SOUTH);
 
-        styleSpinner(spDoDai); styleSpinner(spSession); styleSpinner(spLanSai); styleSpinner(spKhoaPhut);
+        styleSpinner(spDoDai);
+        styleSpinner(spSession);
+        styleSpinner(spLanSai);
+        styleSpinner(spKhoaPhut);
+        chkDoiMk.setFont(UITheme.FONT_BASE);
+        chkDoiMk.setOpaque(false);
         taiDuLieu();
     }
 
-    private void chayMaHoaDuLieuCu() {
-        int xacNhan = JOptionPane.showConfirmDialog(this,
-                "Bạn có chắc muốn mã hóa toàn bộ dữ liệu nhạy cảm đang lưu dạng plaintext?\n"
-                        + "Thao tác này an toàn, có thể chạy nhiều lần.",
-                "Xác nhận mã hóa dữ liệu",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
+    private JPanel buildBanner() {
+        JPanel banner = UITheme.gradientBanner();
+        banner.setLayout(new BorderLayout());
+        banner.setBorder(new EmptyBorder(16, 20, 16, 20));
+        banner.setPreferredSize(new Dimension(10, 82));
+        JLabel t = new JLabel("Cấu hình bảo mật");
+        t.setFont(UITheme.FONT_TITLE);
+        t.setForeground(Color.WHITE);
+        JLabel s = new JLabel("Chính sách mật khẩu · Phiên đăng nhập · Khóa tài khoản · Mã hóa AES-256");
+        s.setFont(UITheme.FONT_BASE);
+        s.setForeground(new Color(255, 255, 255, 215));
+        JPanel box = new JPanel();
+        box.setOpaque(false);
+        box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
+        box.add(t);
+        box.add(Box.createRigidArea(new Dimension(0, 4)));
+        box.add(s);
+        banner.add(box, BorderLayout.CENTER);
+        return banner;
+    }
 
-        if (xacNhan != JOptionPane.YES_OPTION) return;
+    private JPanel buildCardChinhSach() {
+        JPanel card = UITheme.card();
+        card.setLayout(new BorderLayout(0, 12));
+        card.setBorder(new EmptyBorder(20, 24, 20, 24));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 280));
 
-        lblTrangThaiMaHoa.setText("Đang mã hóa, vui lòng chờ...");
-        lblTrangThaiMaHoa.setForeground(UITheme.TEXT_MUTED);
+        JLabel td = new JLabel("Chính sách đăng nhập & mật khẩu");
+        td.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        td.setForeground(UITheme.TEXT_PRIMARY);
 
-        SwingWorker<Integer, Void> worker = new SwingWorker<>() {
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 6, 8, 6);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        themDong(form, gbc, 0, "Độ dài mật khẩu tối thiểu", spDoDai, "ký tự (4–32)");
+        themDong(form, gbc, 1, "Thời gian hết phiên (session)", spSession, "phút");
+        themDong(form, gbc, 2, "Số lần đăng nhập sai tối đa", spLanSai, "lần → khóa tạm");
+        themDong(form, gbc, 3, "Thời gian khóa tài khoản", spKhoaPhut, "phút");
+
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 3;
+        form.add(chkDoiMk, gbc);
+
+        card.add(td, BorderLayout.NORTH);
+        card.add(form, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JPanel buildCardMaHoa() {
+        JPanel card = UITheme.card();
+        card.setLayout(new BorderLayout(0, 10));
+        card.setBorder(new EmptyBorder(18, 24, 18, 24));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+
+        JLabel td = new JLabel("Mã hóa dữ liệu nhạy cảm (AES-256)");
+        td.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        td.setForeground(UITheme.TEXT_PRIMARY);
+
+        JLabel moTa = new JLabel("<html>Mã hóa Email, Số điện thoại, Địa chỉ, Quê quán của sinh viên.<br>"
+                + "Chạy một lần để mã hóa toàn bộ dữ liệu cũ đang lưu dạng plaintext.</html>");
+        moTa.setFont(UITheme.FONT_BASE);
+        moTa.setForeground(UITheme.TEXT_MUTED);
+
+        JButton btn = UITheme.primaryButton("Mã hóa dữ liệu cũ ngay");
+        btn.addActionListener(e -> maHoaDuLieuCu());
+
+        JPanel south = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        south.setOpaque(false);
+        south.add(btn);
+
+        card.add(td, BorderLayout.NORTH);
+        card.add(moTa, BorderLayout.CENTER);
+        card.add(south, BorderLayout.SOUTH);
+        return card;
+    }
+
+    private void maHoaDuLieuCu() {
+        int ok = JOptionPane.showConfirmDialog(this,
+                "Chạy migrate mã hóa toàn bộ trường nhạy cảm còn plaintext?\nCó thể mất vài giây với dữ liệu lớn.",
+                "Xác nhận mã hóa", JOptionPane.YES_NO_OPTION);
+        if (ok != JOptionPane.YES_OPTION) return;
+        btnBusy(true);
+        SwingWorker<Integer, Void> w = new SwingWorker<>() {
             @Override
             protected Integer doInBackground() throws Exception {
-                return DataEncryptionMigrator.migrateSinhVien();
+                try {
+                    Class<?> c = Class.forName("vn.edu.eaut.qlhocphi.util.DataEncryptionMigrator");
+                    Object r = c.getMethod("migrateSinhVien").invoke(null);
+                    return r instanceof Integer ? (Integer) r : 0;
+                } catch (ClassNotFoundException ex) {
+                    return -1;
+                }
             }
 
             @Override
             protected void done() {
+                btnBusy(false);
                 try {
-                    int soBanGhi = get();
-                    if (soBanGhi == 0) {
-                        lblTrangThaiMaHoa.setText("✓ Tất cả dữ liệu đã được mã hóa rồi.");
-                        lblTrangThaiMaHoa.setForeground(new Color(34, 139, 34));
-                        UIUtils.thongBao(CauHinhBaoMatPanel.this, "Tất cả dữ liệu nhạy cảm đã được mã hóa sẵn.");
+                    int n = get();
+                    if (n < 0) {
+                        UIUtils.thongBaoLoi(CauHinhBaoMatPanel.this,
+                                "Không tìm thấy DataEncryptionMigrator. Chạy migrate bằng SQL/tool đã triển khai.");
                     } else {
-                        lblTrangThaiMaHoa.setText("✓ Đã mã hóa thành công " + soBanGhi + " bản ghi.");
-                        lblTrangThaiMaHoa.setForeground(new Color(34, 139, 34));
-                        UIUtils.thongBao(CauHinhBaoMatPanel.this,
-                                "Đã mã hóa thành công " + soBanGhi + " bản ghi sinh viên.");
+                        UIUtils.thongBao(CauHinhBaoMatPanel.this, "Đã mã hóa " + n + " bản ghi (hoặc bỏ qua bản ghi đã mã hóa).");
                     }
                 } catch (Exception ex) {
-                    lblTrangThaiMaHoa.setText("✗ Lỗi: " + ex.getMessage());
-                    lblTrangThaiMaHoa.setForeground(Color.RED);
-                    UIUtils.thongBaoLoi(CauHinhBaoMatPanel.this, "Lỗi khi mã hóa: " + ex.getMessage());
+                    UIUtils.thongBaoLoi(CauHinhBaoMatPanel.this, ex.getMessage());
                 }
             }
         };
-        worker.execute();
+        w.execute();
+    }
+
+    private void btnBusy(boolean busy) {
+        setCursor(busy ? Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) : Cursor.getDefaultCursor());
     }
 
     private void themDong(JPanel form, GridBagConstraints gbc, int row, String label, JComponent field, String donVi) {
-        gbc.gridy = row; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         gbc.gridx = 0;
         JLabel lbl = new JLabel(label);
         lbl.setFont(UITheme.FONT_BOLD);
         lbl.setForeground(UITheme.TEXT_PRIMARY);
         form.add(lbl, gbc);
-        gbc.gridx = 1; gbc.weightx = 0;
-        field.setPreferredSize(new Dimension(100, 36));
+        gbc.gridx = 1;
+        field.setPreferredSize(new Dimension(110, 34));
         form.add(field, gbc);
         gbc.gridx = 2;
         JLabel dv = new JLabel(donVi);
@@ -225,25 +234,11 @@ public class CauHinhBaoMatPanel extends JPanel {
         b.setSoLanDangNhapSaiToiDa((Integer) spLanSai.getValue());
         b.setThoiGianKhoaPhut((Integer) spKhoaPhut.getValue());
         b.setBatBuocDoiMkLanDau(chkDoiMk.isSelected());
-
-        // Lưu CSDL trên luồng nền – không treo UI (SwingWorker)
-        SwingWorker<Void, Void> w = new SwingWorker<>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-                service.luuCauHinhBaoMat(b);
-                return null;
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    get();
-                    UIUtils.thongBao(CauHinhBaoMatPanel.this, "Đã lưu cấu hình bảo mật");
-                } catch (Exception ex) {
-                    UIUtils.thongBaoLoi(CauHinhBaoMatPanel.this, ex.getMessage());
-                }
-            }
-        };
-        w.execute();
+        try {
+            service.luuCauHinhBaoMat(b);
+            UIUtils.thongBao(this, "Đã lưu cấu hình bảo mật");
+        } catch (Exception ex) {
+            UIUtils.thongBaoLoi(this, ex.getMessage());
+        }
     }
 }

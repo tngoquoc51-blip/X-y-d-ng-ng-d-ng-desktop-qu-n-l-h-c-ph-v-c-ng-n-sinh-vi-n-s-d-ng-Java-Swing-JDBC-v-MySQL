@@ -145,6 +145,35 @@ public class ThongBaoDAO {
         }
     }
 
+    /** Lay tat ca thong bao theo vai tro + man hinh key (hop thu noi bo). */
+    public List<ThongBao> layTatCaTheoVaiTro(int maTK, String vaiTro, String manHinhKey) throws SQLException {
+        String sql = "SELECT tb.*, " +
+                "CASE WHEN d.MaThongBao IS NULL THEN 0 ELSE 1 END AS DaDoc " +
+                "FROM ThongBao tb " +
+                "LEFT JOIN ThongBaoDaDoc d ON d.MaThongBao = tb.MaThongBao AND d.MaTK = ? " +
+                "WHERE tb.ManHinhKey = ? " +
+                "AND (tb.VaiTroNhan = 'ALL' OR tb.VaiTroNhan = ?) " +
+                "ORDER BY DaDoc ASC, tb.ThoiGianTao DESC LIMIT 200";
+        List<ThongBao> list = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, maTK);
+            ps.setString(2, manHinhKey);
+            ps.setString(3, vaiTro);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ThongBao tb = map(rs);
+                    try {
+                        tb.setDaDoc(rs.getInt("DaDoc") == 1);
+                    } catch (SQLException ignored) {
+                    }
+                    list.add(tb);
+                }
+            }
+        }
+        return list;
+    }
+
     private ThongBao map(ResultSet rs) throws SQLException {
         ThongBao tb = new ThongBao();
         tb.setMaThongBao(rs.getInt("MaThongBao"));

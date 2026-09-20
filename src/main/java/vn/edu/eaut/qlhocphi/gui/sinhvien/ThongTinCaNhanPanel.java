@@ -38,7 +38,8 @@ import java.util.regex.Pattern;
  */
 public class ThongTinCaNhanPanel extends JPanel {
     private static final DateTimeFormatter DMY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.+-]+@[\\w-]+\\.[a-zA-Z]{2,}$");
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^0\\d{9,10}$");
 
     private final SinhVienService sinhVienService = new SinhVienService();
@@ -457,7 +458,9 @@ public class ThongTinCaNhanPanel extends JPanel {
                     sinhVienHienTai.setAnhDaiDien(duongDanMoi);
                     sinhVienService.capNhat(sinhVienHienTai);
                     avatarPanel.taiAnh(duongDanMoi);
-                    UIUtils.thongBao(ThongTinCaNhanPanel.this, "Đã cập nhật ảnh đại diện.");
+                    UIUtils.thongBao(ThongTinCaNhanPanel.this,
+                            "Đã cập nhật ảnh đại diện.\nPath: " + duongDanMoi
+                                    + "\nFile tồn tại: " + new File(duongDanMoi).exists());
                 } catch (Exception ex) {
                     UIUtils.thongBaoLoi(ThongTinCaNhanPanel.this, "Đổi ảnh thất bại.\n" + rootMessage(ex));
                 }
@@ -466,18 +469,41 @@ public class ThongTinCaNhanPanel extends JPanel {
         worker.execute();
     }
 
+    /** Thư mục avatar cố định (không phụ thuộc chỗ chạy app) */
+    private File thuMucAvatar() {
+        File dir = new File(System.getProperty("user.home"),
+                ".qlhocphi" + File.separator + "avatars");
+        if (!dir.exists() && !dir.mkdirs()) {
+            dir = new File("avatars");
+            dir.mkdirs();
+        }
+        return dir;
+    }
+
     private String luuAnhDaiDien(File fileGoc) throws IOException {
-        File thuMuc = new File("avatars");
-        if (!thuMuc.exists()) {
-            boolean daTao = thuMuc.mkdirs();
-            if (!daTao && !thuMuc.exists()) {
-                throw new IOException("Khong the tao thu muc avatars");
+        BufferedImage img = ImageIO.read(fileGoc);
+        if (img == null) {
+            throw new IOException("Không đọc được ảnh. Hãy chọn file JPG hoặc PNG hợp lệ.");
+        }
+
+        File thuMuc = thuMucAvatar();
+        File fileDich = new File(thuMuc, maSV + ".png");
+
+        // Xóa file cũ cùng mã SV nếu có
+        for (String duoi : new String[]{"jpg", "jpeg", "png"}) {
+            File cu = new File(thuMuc, maSV + "." + duoi);
+            if (cu.exists() && !cu.equals(fileDich)) {
+                cu.delete();
             }
         }
-        String duoi = layDuoiFile(fileGoc.getName());
-        File fileDich = new File(thuMuc, maSV + "." + duoi);
-        Files.copy(fileGoc.toPath(), fileDich.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        return "avatars/" + maSV + "." + duoi;
+
+        if (!ImageIO.write(img, "png", fileDich)) {
+            throw new IOException("Ghi file ảnh thất bại: " + fileDich.getAbsolutePath());
+        }
+        if (!fileDich.exists() || fileDich.length() == 0) {
+            throw new IOException("File ảnh sau khi lưu bị rỗng.");
+        }
+        return fileDich.getAbsolutePath();
     }
 
     private String layDuoiFile(String tenFile) {
@@ -495,9 +521,10 @@ public class ThongTinCaNhanPanel extends JPanel {
         chooser.setSelectedFile(new File("HoSo_" + maSV + ".pdf"));
         int ketQua = chooser.showSaveDialog(this);
         if (ketQua != JFileChooser.APPROVE_OPTION) return;
-        String duongDan = chooser.getSelectedFile().getAbsolutePath();
-        if (!duongDan.toLowerCase().endsWith(".pdf")) duongDan += ".pdf";
-        String duongDanCuoi = duongDan;
+
+        File chon = chooser.getSelectedFile();
+        File fileLuu = new File(chon.getParentFile(), "HoSo_" + maSV + ".pdf");
+        String duongDanCuoi = fileLuu.getAbsolutePath();
 
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
@@ -559,9 +586,31 @@ public class ThongTinCaNhanPanel extends JPanel {
             if (duongDan != null && !duongDan.isBlank()) {
                 try {
                     File f = new File(duongDan);
-                    if (f.exists()) anh = ImageIO.read(f);
+
+                    // Path cũ dạng "avatars/xxx.jpg" → tìm trong thư mục cố định
+                    if (!f.isAbsolute() || !f.exists()) {
+                        File theoTen = new File(thuMucAvatar(), new File(duongDan).getName());
+                        if (theoTen.exists()) {
+                            f = theoTen;
+                        }
+                    }
+
+                    // Vẫn không có → thử theo mã SV (jpg/png/jpeg)
+                    if (!f.exists() && maSV != null) {
+                        for (String duoi : new String[]{"jpg", "jpeg", "png"}) {
+                            File thu = new File(thuMucAvatar(), maSV + "." + duoi);
+                            if (thu.exists()) {
+                                f = thu;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (f.exists()) {
+                        anh = ImageIO.read(f);
+                    }
                 } catch (IOException ignored) {
-                    // Neu doc anh loi, cu de anh = null de fallback ve chu cai dau ten
+                    // Đọc lỗi → hiện chữ cái đầu tên
                 }
             }
             repaint();
