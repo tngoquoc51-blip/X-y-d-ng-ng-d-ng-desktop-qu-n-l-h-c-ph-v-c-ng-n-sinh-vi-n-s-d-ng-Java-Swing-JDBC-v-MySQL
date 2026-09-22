@@ -18,7 +18,7 @@ public class BackupService {
 
     private static class ThongTinKetNoi {
         String host = "localhost";
-        String port = "3306";
+        String port = "3310";
         String database = "qlhocphi";
     }
 

@@ -102,7 +102,7 @@ public class BackupRestorePanel extends JPanel {
 
     private JPanel buildThongTinKetNoiRow() {
         String host = "localhost";
-        String port = "3306";
+        String port = "3310";
         String db = "qlhocphi";
         try {
             String url = vn.edu.eaut.qlhocphi.config.AppConfig.get("db.url");
